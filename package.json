@@ -1,0 +1,31 @@
+{
+  "name": "kanban",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/avirup2512/projectManagement.git"
+  },
+  "author": "Avirup Chakraborty",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/avirup2512/projectManagement/issues"
+  },
+  "homepage": "https://github.com/avirup2512/projectManagement#readme",
+  "description": "",
+  "dependencies": {
+    "cookie-parser": "~1.4.4",
+    "cors": "^2.8.5",
+    "debug": "~2.6.9",
+    "express": "~4.16.1",
+    "jsonwebtoken": "^9.0.2",
+    "kanban": "file:",
+    "morgan": "~1.9.1",
+    "mysql": "^2.18.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
+  }
+}
