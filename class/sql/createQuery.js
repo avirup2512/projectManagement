@@ -19,9 +19,11 @@ var createQuery = {
         "FOREIGN KEY (user_id) REFERENCES user(id))",
     createBoardUserTable: "CREATE TABLE board_user" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
-        "user_id int, board_id int," +
+        "user_id int, board_id int, role_id int," +
         "FOREIGN KEY (user_id) REFERENCES user(id)," +
-        "FOREIGN KEY (board_id) REFERENCES board(id))",
+        "FOREIGN KEY (role_id) REFERENCES role(id)," +
+        "FOREIGN KEY (board_id) REFERENCES board(id)," +
+        "UNIQUE (user_id, board_id))",
     createBoardLabelTable: "CREATE TABLE board_label" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
         "name varchar(255),color varchar(255), board_id int," +

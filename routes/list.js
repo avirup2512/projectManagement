@@ -223,113 +223,18 @@ router.delete('/delete', async function (req, res) {
      *      500:
      */
 router.get('/getAllBoard', async function (req, res) {
+    console.log("HI");
+    
     Object.assign(req.body, { userId: req.authenticatedUser.id })
-    if (!req.authenticatedUser) {
+    if (!req.authenticatedUser ) {
         res.status(400)
-            .send(new error("Send Proper data."));
+        .send(new error("Send Proper data."));
         return;
     } else {
         try {
-            var response = await board.addUser(req.body);
+            var response = await board.getAllBoard(req.body);
             console.log(response);
             
-            res.status(response.status)
-                .send(response)
-        } catch (err) {
-            console.log(err);
-            
-            res.status(344)
-                .send(new error(err));
-        }
-    }
-});
-/** POST Methods */
-    /**
-     * @openapi
-     * '/board/addUser':
-     *  post:
-     *     tags:
-     *     - Board Controller
-     *     summary: Add User to a Board
-     *     security:
-     *          bearerAuth: [read]
-     *     requestBody:
-     *      required: true
-     *      content:
-     *        application/json:
-     *           schema:
-     *            type: object
-     *            required:
-     *              - boardId
-     *            properties:
-     *     responses:
-     *      201:
-     *        description: Created
-     *      409:
-     *        description: Conflict
-     *      404:
-     *        description: Not Found
-     *      500:
-     */
-router.post('/addUser', async function (req, res) {
-    console.log("HI");
-    let { userId, boardId, roleId } = req.body;
-    Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id })
-    if (!req.authenticatedUser || !userId || !boardId || !roleId ) {
-        res.status(400)
-        .send(new error("Send Proper data."));
-        return;
-    } else {
-        try {
-            var response = await board.addUser(req.body);
-            res.status(response.status)
-            .send(response)
-        } catch (err) {
-            console.log(err);
-            
-            res.status(344)
-            .send(new error(err));
-        }
-    }
-})
-/** PUT Methods */
-    /**
-     * @openapi
-     * '/board/editUserRole':
-     *  put:
-     *     tags:
-     *     - Board Controller
-     *     summary: Edit User Role in a Board
-     *     security:
-     *          bearerAuth: [read]
-     *     requestBody:
-     *      required: true
-     *      content:
-     *        application/json:
-     *           schema:
-     *            type: object
-     *            required:
-     *              - boardId
-     *            properties:
-     *     responses:
-     *      201:
-     *        description: Created
-     *      409:
-     *        description: Conflict
-     *      404:
-     *        description: Not Found
-     *      500:
-     */
-router.put('/editUserRole', async function (req, res) {
-    let { userId, boardId, roleId } = req.body;
-    Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id })
-    if (!req.authenticatedUser || !userId || !boardId || !roleId ) {
-        res.status(400)
-        .send(new error("Send Proper data."));
-        return;
-    } else {
-        try {
-            var response = await board.updateUserRole(req.body);
             res.status(response.status)
             .send(response)
         } catch (err) {

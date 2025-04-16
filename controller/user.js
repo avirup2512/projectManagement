@@ -19,6 +19,17 @@ var userController = (function () {
                 return true;
         })
     }
+    user.prototype.checkUserExistsById = async function (id) {
+        return this.connection.query(this.connectionObject,"SELECT * FROM user WHERE id='" + id + "'")
+            .then(function (data) {
+                if (data.length == 0)
+                    return false;
+                else
+                    return true;
+            }).catch(function (err) {
+                return true;
+        })
+    }
     user.prototype.authenticateUser = function (userEmail, userPassword) {
         let result = new response("", 404, {});
         return this.connection.query(this.connectionObject, "SELECT * FROM user WHERE email='" + userEmail + "' AND password='" + userPassword + "'")
