@@ -4,40 +4,63 @@ var createQuery = {
         "first_name varchar(255), last_name varchar(255)," +
         "email varchar(255), password varchar(255), address varchar(255)," +
         "start_date Date, end_date DATE, working BOOLEAN DEFAULT FALSE)",
-    createOrGanizationTable: "CREATE TABLE organization" +
-        "(id int PRIMARY KEY AUTO_INCREMENT,"+
-        "name varchar(255), description varchar(255))",
-    createOrGanizationCountryTable: "CREATE TABLE organization_country" +
-        "(id int PRIMARY KEY AUTO_INCREMENT,"+
-        "org_id int,country varchar(255), countryCode varchar(255))",
-    createOrGanizationCountryStateTable: "CREATE TABLE organization_country_state" +
-        "(id int PRIMARY KEY AUTO_INCREMENT,"+
-        "org_country_id int,state varchar(255), stateCode varchar(255))",
-    createOrGanizationCountryStateCityTable: "CREATE TABLE organization_country_state_city" +
-        "(id int PRIMARY KEY AUTO_INCREMENT,"+
-        "org_country_state_id int,city varchar(255), cityCode varchar(255)," +
-        " UNIQUE (org_country_state_id, city))",
-    createLocationTable: "CREATE TABLE location" +
-        "(id int PRIMARY KEY AUTO_INCREMENT,"+
-        "country varchar(255), state varchar(255)," +
-        "city varchar(255), pincode int, street_name varchar(255))",
     createRoleTable: "CREATE TABLE role" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
         "role varchar(255))",
     createUserRoleTable: "CREATE TABLE user_role" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
         "roleId int, userId int)",
-    createDepartMentTable: "CREATE TABLE department" +
-        "(id int PRIMARY KEY AUTO_INCREMENT,"+
-        "name varchar(255), description varchar(255))",
-    createDepartMentOrganizationTable: "CREATE TABLE organization_department" +
-        "(id int PRIMARY KEY AUTO_INCREMENT,"+
-        "org_id int, organization_country_state_city_id int NOT NULL, dept_id int, UNIQUE (organization_country_state_city_id, dept_id))",
     createUserTypeTable: "CREATE TABLE user_type" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
         "type varchar(255))",
-    createOrganizationUserTable: "CREATE TABLE organization_user" +
+    createBoardTable: "CREATE TABLE board" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
-        "org_id int, user_id int, user_type_id int, org_country_state_city_id int)",
+        "user_id int, name varchar(255), create_date DATETIME DEFAULT CURRENT_TIMESTAMP, is_public BOOLEAN DEFAULT false," +
+        "FOREIGN KEY (user_id) REFERENCES user(id))",
+    createBoardUserTable: "CREATE TABLE board_user" +
+        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "user_id int, board_id int," +
+        "FOREIGN KEY (user_id) REFERENCES user(id)," +
+        "FOREIGN KEY (board_id) REFERENCES board(id))",
+    createBoardLabelTable: "CREATE TABLE board_label" +
+        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "name varchar(255),color varchar(255), board_id int," +
+        "FOREIGN KEY (board_id) REFERENCES board(id))",
+    createCoreLabelTable: "CREATE TABLE core_label" +
+        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "name varchar(255), color varchar(255))",
+    createListTable: "CREATE TABLE list" +
+        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "board_id int, name varchar(255), created_date DATETIME DEFAULT CURRENT_TIMESTAMP, position int," +
+        "FOREIGN KEY (board_id) REFERENCES board(id))",
+    createCardsTable: "CREATE TABLE card" +
+        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "list_id int, name varchar(255),description varchar(255), create_date DATETIME DEFAULT CURRENT_TIMESTAMP," +
+        "is_active BOOLEAN DEFAULT true, due_date DATETIME, reminder_date DATETIME," +
+        "FOREIGN KEY (list_id) REFERENCES list(id))",
+    createCardUserTable: "CREATE TABLE card_user" +
+        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "user_id int, card_id int," +
+        "FOREIGN KEY (user_id) REFERENCES user(id)," +
+        "FOREIGN KEY (card_id) REFERENCES card(id))",
+    createCardLabelTable: "CREATE TABLE card_label" +
+        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "label_id int, card_id int," +
+        "FOREIGN KEY (label_id) REFERENCES board_label(id)," +
+        "FOREIGN KEY (card_id) REFERENCES card(id))",
+    createCheckListItemTable: "CREATE TABLE checklist_item" +
+        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "card_id int, name varchar(255), is_checked BOOLEAN DEFAULT false, position int," +
+        "FOREIGN KEY (card_id) REFERENCES card(id))",
+    createCommentTable: "CREATE TABLE comment" +
+        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "card_id int,user_id int, comment varchar(255), created_date DATETIME DEFAULT CURRENT_TIMESTAMP," +
+        "FOREIGN KEY (card_id) REFERENCES card(id)," +
+        "FOREIGN KEY (user_id) REFERENCES user(id))",
+    createCardActivityTable: "CREATE TABLE card_activity" +
+        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "card_id int,user_id int, activity varchar(255), created_date DATETIME DEFAULT CURRENT_TIMESTAMP," +
+        "FOREIGN KEY (card_id) REFERENCES card(id)," +
+        "FOREIGN KEY (user_id) REFERENCES user(id))",
 }
 module.exports = createQuery;

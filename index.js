@@ -10,7 +10,14 @@ const jwt = require("jsonwebtoken");
 const mysql = require('mysql');
 const connection = require("./class/sql/mysqlDbConnection");
 const createQuery = require("./class/sql/createQuery");
+const authentication = require("./routes/authentication");
+const board = require("./routes/board")
 var app = express();
+app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
 const corsOpts = {
     origin: 'http://localhost:4200'
 };
@@ -28,20 +35,22 @@ app.use(cors(corsOpts), function (req, res, next) {
         }else
         {
             try {
-                const decodedToken = jwt.verify(token, config.secretKey);
+                const decodedToken = jwt.verify(token, "SECRET");
+                console.log(decodedToken);
+                
                 let { userEmail, password } = decodedToken;
                 const con = new connection(mysql);
                 let connect = con.getConnection();
                 con.connect(connect);
                 try {
-                    con.query(connect, "SELECT email, password FROM user")
+                    con.query(connect, "SELECT id,email, password FROM user")
                         .then(function (data) {
                         if (!data || data.length == 0) {
                             let err = new error("User does'nt exists");
                             res.status(400)
                                 .send(err.msg);
                         } else {
-                            globalData.userEmail = userEmail;
+                            req.authenticatedUser = {userEmail, id:data[0].id};
                             next();
                             //con.stop(connect);
                         }
@@ -54,7 +63,7 @@ app.use(cors(corsOpts), function (req, res, next) {
                     .send(err.msg);
                 }
             } catch (r) {
-                console.log(error);
+                console.log(r);
                 let err = new error(r);
             res.status(400)
                 .send(err.msg);
@@ -64,6 +73,8 @@ app.use(cors(corsOpts), function (req, res, next) {
         next();
     }
 });
+app.use('/auth', cors(corsOpts), authentication);
+app.use('/board',cors(corsOpts), board);
 app.listen(port, () => {
     console.log("App has been started.");
 })
@@ -134,6 +145,127 @@ async function createTables()
                     addInitialValue(idx + 1, array);
                 };
                 addInitialValue(0, InitialValues);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
+    // BOARD TABLE CREATE
+    var boardTableExits = await con.checkTableExists(connectionObject,dbName,"board");
+    if(!boardTableExits)
+    {
+        con.createTable(connectionObject, createQuery.createBoardTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
+    // BOARD USER TABLE CREATE
+    var boardUserTableExists = await con.checkTableExists(connectionObject,dbName,"board_user");
+    if(!boardUserTableExists)
+    {
+        con.createTable(connectionObject, createQuery.createBoardUserTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
+    // BOARD LABEL TABLE CREATE
+    var boardLabelExists = await con.checkTableExists(connectionObject,dbName,"board_label");
+    if(!boardLabelExists)
+    {
+        con.createTable(connectionObject, createQuery.createBoardLabelTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
+    // CORE LABEL TABLE CREATE
+    var coreLabelTableExists = await con.checkTableExists(connectionObject,dbName,"core_label");
+    if(!coreLabelTableExists)
+    {
+        con.createTable(connectionObject, createQuery.createCoreLabelTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
+    // List TABLE CREATE
+    var listTableExists = await con.checkTableExists(connectionObject,dbName,"list");
+    if(!listTableExists)
+    {
+        con.createTable(connectionObject, createQuery.createListTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
+    // CARD TABLE CREATE
+    var cardTableExists = await con.checkTableExists(connectionObject,dbName,"card");
+    if(!cardTableExists)
+    {
+        con.createTable(connectionObject, createQuery.createCardsTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
+    // CARD USER TABLE CREATE
+    var cardUserTableExists = await con.checkTableExists(connectionObject,dbName,"card_user");
+    if(!cardUserTableExists)
+    {
+        con.createTable(connectionObject, createQuery.createCardUserTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
+    // CARD LABEL TABLE CREATE
+    var cardLabelTableExists = await con.checkTableExists(connectionObject,dbName,"card_label");
+    if(!cardLabelTableExists)
+    {
+        con.createTable(connectionObject, createQuery.createCardLabelTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
+    // CHECKLIST ITEM TABLE CREATE
+    var checkListItemExists = await con.checkTableExists(connectionObject,dbName,"checklist_item");
+    if(!checkListItemExists)
+    {
+        con.createTable(connectionObject, createQuery.createCheckListItemTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
+    // COMMENT TABLE CREATE
+    var commentTableExists = await con.checkTableExists(connectionObject,dbName,"comment");
+    if(!commentTableExists)
+    {
+        con.createTable(connectionObject, createQuery.createCommentTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
+     // CARD ACTIVITY TABLE CREATE
+    var cardActivityTableExists = await con.checkTableExists(connectionObject,dbName,"card_activity");
+    if(!cardActivityTableExists)
+    {
+        con.createTable(connectionObject, createQuery.createCardActivityTable)
+            .then(function (data) {
+                console.log(data);
             }).catch(function (err) {
                 console.log(err);
         })
