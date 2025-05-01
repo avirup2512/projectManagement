@@ -4,12 +4,12 @@ const mysql = require('mysql');
 const connection = require("../class/sql/mysqlDbConnection");
 var router = express.Router();
 var error = require('../class/error');
-var boardController = require("../controller/board")
+var listController = require("../controller/list")
 
 let con = new connection(mysql);
 let connectionObject = con.getConnection();
 con.connect(connectionObject);
-var board = new boardController(con,connectionObject);
+var list = new listController(con,connectionObject);
 router.use((req, res, next) => {
     if (req.url == "/")
     {
@@ -22,11 +22,11 @@ router.use((req, res, next) => {
  /** POST Methods */
     /**
      * @openapi
-     * '/board/create':
+     * '/list/create':
      *  post:
      *     tags:
-     *     - Board Controller
-     *     summary: Create a board
+     *     - List Controller
+     *     summary: Create a list
      *     security:
      *          bearerAuth: [read]
      *     requestBody:
@@ -37,9 +37,9 @@ router.use((req, res, next) => {
      *            type: object
      *            required:
      *              - name
-     *              - user_id
+     *              - board_id
      *              - created_date
-     *              - is_public
+     *              - position
      *            properties:
      *              firstName:
      *                type: string
@@ -67,18 +67,20 @@ router.use((req, res, next) => {
      *        description: Server Error
      */
 router.post('/create', async function (req, res) {
-    let { name, isPublic } = req.body;
+    let { name, boardId,position } = req.body;
     Object.assign(req.body, { userId: req.authenticatedUser.id })
-    if (!req.authenticatedUser || !name) {
+    if (!req.authenticatedUser || !name || !boardId || !position) {
         res.status(400)
             .send(new error("Send Proper data."));
         return;
     } else {
         try {
-            var response = await board.createBoard(req.body);
+            var response = await list.createList(req.body);
             res.status(response.status)
                 .send(response)
         } catch (err) {
+            console.log(err);
+            
             res.status(400)
                 .send(new error(err));
         }
@@ -87,11 +89,11 @@ router.post('/create', async function (req, res) {
 /** PUT Methods */
     /**
      * @openapi
-     * '/board/edit':
+     * '/list/edit':
      *  put:
      *     tags:
-     *     - Board Controller
-     *     summary: Edit a board
+     *     - List Controller
+     *     summary: Edit a list
      *     security:
      *          bearerAuth: [read]
      *     requestBody:
@@ -102,8 +104,9 @@ router.post('/create', async function (req, res) {
      *            type: object
      *            required:
      *              - name
+     *              - listId
+     *              - position
      *              - boardId
-     *              - is_public
      *            properties:
      *              firstName:
      *                type: string
@@ -131,18 +134,20 @@ router.post('/create', async function (req, res) {
      *        description: Server Error
      */
 router.put('/edit', async function (req, res) {
-    let { boardId, name, isPublic } = req.body;
+    let { name, boardId,listId, position } = req.body;
     Object.assign(req.body, { userId: req.authenticatedUser.id })
-    if (!req.authenticatedUser || !boardId || !name ) {
+    if (!req.authenticatedUser || !boardId || !listId ) {
         res.status(400)
         .send(new error("Send Proper data."));
         return;
     } else {
         try {
-            var response = await board.editBoard(req.body);
+            var response = await list.editList(req.body);
             res.status(response.status)
             .send(response)
         } catch (err) {
+            console.log(err);
+            
             res.status(400)
             .send(new error(err));
         }
@@ -151,11 +156,11 @@ router.put('/edit', async function (req, res) {
 /** DELETE Methods */
     /**
      * @openapi
-     * '/board/delete':
+     * '/list/delete':
      *  delete:
      *     tags:
-     *     - Board Controller
-     *     summary: Delete a board
+     *     - List Controller
+     *     summary: Delete a list
      *     security:
      *          bearerAuth: [read]
      *     requestBody:
@@ -165,7 +170,7 @@ router.put('/edit', async function (req, res) {
      *           schema:
      *            type: object
      *            required:
-     *              - boardId
+     *              - ListId
      *            properties:
      *     responses:
      *      201:
@@ -177,18 +182,19 @@ router.put('/edit', async function (req, res) {
      *      500:
      */
 router.delete('/delete', async function (req, res) {
-    let { boardId } = req.body;
+    let { listId, boardId } = req.body;
     Object.assign(req.body, { userId: req.authenticatedUser.id })
-    if (!req.authenticatedUser || !boardId ) {
+    if (!req.authenticatedUser || !listId || !boardId ) {
         res.status(400)
         .send(new error("Send Proper data."));
         return;
     } else {
         try {
-            var response = await board.deleteBoard(req.body);
+            var response = await list.deleteList(req.body);
             res.status(response.status)
             .send(response)
         } catch (err) {
+            console.log(err);
             res.status(400)
             .send(new error(err));
         }
@@ -197,11 +203,11 @@ router.delete('/delete', async function (req, res) {
 /** GET Methods */
     /**
      * @openapi
-     * '/board/getAllBoard':
+     * '/list/getAllList':
      *  get:
      *     tags:
-     *     - Board Controller
-     *     summary: Get all board
+     *     - List Controller
+     *     summary: Get all list
      *     security:
      *          bearerAuth: [read]
      *     requestBody:
@@ -222,24 +228,20 @@ router.delete('/delete', async function (req, res) {
      *        description: Not Found
      *      500:
      */
-router.get('/getAllBoard', async function (req, res) {
-    console.log("HI");
-    
+router.get('/getAllList', async function (req, res) {
+    let { boardId } = req.body;
     Object.assign(req.body, { userId: req.authenticatedUser.id })
-    if (!req.authenticatedUser ) {
+    if (!req.authenticatedUser || !boardId ) {
         res.status(400)
         .send(new error("Send Proper data."));
         return;
     } else {
         try {
-            var response = await board.getAllBoard(req.body);
-            console.log(response);
-            
+            var response = await list.getAllList(req.body);
             res.status(response.status)
             .send(response)
         } catch (err) {
             console.log(err);
-            
             res.status(344)
             .send(new error(err));
         }

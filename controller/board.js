@@ -190,12 +190,6 @@ var boardController = (function () {
         let hasUser = await this.user.checkUserExistsById(userId);
         let hasBoard = await this.checkBoardExists(boardId);
         let userRole = await this.checkUserRole(boardId, authenticateUserId);
-        console.log(hasBoard);
-        console.log(hasUser);
-        console.log(userRole);
-        
-        
-        
         if (hasUser && hasBoard && userRole.length > 0 && userRole[0].role_name == "ROLE_SUPER_ADMIN")
         {
             let query = "INSERT INTO board_user (user_id,board_id,role_id)" +

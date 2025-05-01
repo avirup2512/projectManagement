@@ -34,7 +34,8 @@ var createQuery = {
     createListTable: "CREATE TABLE list" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
         "board_id int, name varchar(255), created_date DATETIME DEFAULT CURRENT_TIMESTAMP, position int," +
-        "FOREIGN KEY (board_id) REFERENCES board(id))",
+        "FOREIGN KEY (board_id) REFERENCES board(id)," +
+        "UNIQUE (board_id, position))",
     createCardsTable: "CREATE TABLE card" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
         "list_id int, name varchar(255),description varchar(255), create_date DATETIME DEFAULT CURRENT_TIMESTAMP," +

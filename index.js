@@ -11,7 +11,9 @@ const mysql = require('mysql');
 const connection = require("./class/sql/mysqlDbConnection");
 const createQuery = require("./class/sql/createQuery");
 const authentication = require("./routes/authentication");
-const board = require("./routes/board")
+const board = require("./routes/board");
+const list = require("./routes/list");
+const card = require("./routes/card");
 var app = express();
 app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 app.use(express.json());
@@ -74,7 +76,9 @@ app.use(cors(corsOpts), function (req, res, next) {
     }
 });
 app.use('/auth', cors(corsOpts), authentication);
-app.use('/board',cors(corsOpts), board);
+app.use('/board', cors(corsOpts), board);
+app.use('/list', cors(corsOpts), list);
+app.use('/card',cors(corsOpts), card);
 app.listen(port, () => {
     console.log("App has been started.");
 })
