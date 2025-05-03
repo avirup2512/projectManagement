@@ -46,6 +46,20 @@ var connection = (function () {
         });        
         return queryResult;
     }
+     mysqlConnectionInstance.prototype.queryByArray = async function (con,queryString,param)
+    {
+        var queryResult = new Promise(async (resolve, reject) => {
+            con.query(queryString,param, await function (err, rows, fields) {
+            if (err)
+            {
+                reject(err);
+            } else {
+                resolve(rows);
+            }
+            })
+        });        
+        return queryResult;
+    }
     
     mysqlConnectionInstance.prototype.checkTableExists = async function (con,schemaName,tableName)
     {

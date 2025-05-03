@@ -43,9 +43,11 @@ var createQuery = {
         "FOREIGN KEY (list_id) REFERENCES list(id))",
     createCardUserTable: "CREATE TABLE card_user" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
-        "user_id int, card_id int," +
+        "user_id int, card_id int, role_id int," +
         "FOREIGN KEY (user_id) REFERENCES user(id)," +
-        "FOREIGN KEY (card_id) REFERENCES card(id))",
+        "FOREIGN KEY (card_id) REFERENCES card(id)," +
+        "FOREIGN KEY (role_id) REFERENCES role(id)," +
+        "UNIQUE (user_id, card_id))",
     createCardLabelTable: "CREATE TABLE card_label" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
         "label_id int, card_id int," +

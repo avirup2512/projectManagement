@@ -67,7 +67,7 @@ router.use((req, res, next) => {
      *        description: Server Error
      */
 router.post('/create', async function (req, res) {
-    let { name, boardId,listId,description,dueDate,reminderDate } = req.body;
+    let { name, boardId,listId,description,isActive,dueDate,reminderDate } = req.body;
     Object.assign(req.body, { userId: req.authenticatedUser.id })
     if (!req.authenticatedUser || !name || !boardId || !listId) {
         res.status(400)
@@ -89,11 +89,11 @@ router.post('/create', async function (req, res) {
 /** PUT Methods */
     /**
      * @openapi
-     * '/list/edit':
+     * '/card/edit':
      *  put:
      *     tags:
-     *     - List Controller
-     *     summary: Edit a list
+     *     - Card Controller
+     *     summary: Edit a card
      *     security:
      *          bearerAuth: [read]
      *     requestBody:
@@ -134,15 +134,15 @@ router.post('/create', async function (req, res) {
      *        description: Server Error
      */
 router.put('/edit', async function (req, res) {
-    let { name, boardId,listId, position } = req.body;
+    let { name, boardId,listId,description,isActive,dueDate,reminderDate,cardId } = req.body;
     Object.assign(req.body, { userId: req.authenticatedUser.id })
-    if (!req.authenticatedUser || !boardId || !listId ) {
+    if (!req.authenticatedUser || !name || !boardId || !listId || !cardId) {
         res.status(400)
         .send(new error("Send Proper data."));
         return;
     } else {
         try {
-            var response = await list.editList(req.body);
+            var response = await card.editCards(req.body);
             res.status(response.status)
             .send(response)
         } catch (err) {
@@ -184,7 +184,7 @@ router.put('/edit', async function (req, res) {
 router.delete('/delete', async function (req, res) {
     let { listId, boardId } = req.body;
     Object.assign(req.body, { userId: req.authenticatedUser.id })
-    if (!req.authenticatedUser || !listId || !boardId ) {
+    if (!req.authenticatedUser || !name || !boardId || !listId) {
         res.status(400)
         .send(new error("Send Proper data."));
         return;
@@ -242,6 +242,103 @@ router.get('/getAllList', async function (req, res) {
             .send(response)
         } catch (err) {
             console.log(err);
+            res.status(344)
+            .send(new error(err));
+        }
+    }
+})
+/** POST Methods */
+    /**
+     * @openapi
+     * '/card/addUser':
+     *  post:
+     *     tags:
+     *     - Card Controller
+     *     summary: Add User to a Card
+     *     security:
+     *          bearerAuth: [read]
+     *     requestBody:
+     *      required: true
+     *      content:
+     *        application/json:
+     *           schema:
+     *            type: object
+     *            required:
+     *              - boardId
+     *            properties:
+     *     responses:
+     *      201:
+     *        description: Created
+     *      409:
+     *        description: Conflict
+     *      404:
+     *        description: Not Found
+     *      500:
+     */
+router.post('/addUser', async function (req, res) {
+    console.log("HI");
+    let { userId, cardId, roleId, boardId } = req.body;
+    Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id })
+    if (!req.authenticatedUser || !userId || !cardId || !roleId || !boardId) {
+        res.status(400)
+        .send(new error("Send Proper data."));
+        return;
+    } else {
+        try {
+            var response = await card.addUser(req.body);
+            res.status(response.status)
+            .send(response)
+        } catch (err) {
+            console.log(err);
+            
+            res.status(344)
+            .send(new error(err));
+        }
+    }
+})
+/** PUT Methods */
+    /**
+     * @openapi
+     * '/card/editUserRole':
+     *  put:
+     *     tags:
+     *     - Card Controller
+     *     summary: Edit User Role in a Card
+     *     security:
+     *          bearerAuth: [read]
+     *     requestBody:
+     *      required: true
+     *      content:
+     *        application/json:
+     *           schema:
+     *            type: object
+     *            required:
+     *              - cardId
+     *            properties:
+     *     responses:
+     *      201:
+     *        description: Created
+     *      409:
+     *        description: Conflict
+     *      404:
+     *        description: Not Found
+     *      500:
+     */
+router.put('/editUserRole', async function (req, res) {
+    let { userId, boardId,cardId, roleId } = req.body;
+    Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id })
+    if (!req.authenticatedUser || !userId || !boardId || !cardId || !roleId ) {
+        res.status(400)
+        .send(new error("Send Proper data."));
+        return;
+    } else {
+        try {
+            var response = await card.updateUserRole(req.body);
+            res.status(response.status)
+            .send(response)
+        } catch (err) {
+            console.log(err);
+            
             res.status(344)
             .send(new error(err));
         }

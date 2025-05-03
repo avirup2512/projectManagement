@@ -27,10 +27,7 @@ var boardController = (function () {
             "FROM board_user bu " +
             "JOIN role r ON bu.role_id = r.id " +
             "WHERE bu.user_id = '" + userId + "' AND bu.board_id = " + boardId + "";
-        console.log(query);
-        
         return this.connection.query(this.connectionObject, query)
-            
             .then(function (data) {
                 if (data.length == 0)
                     return [];
@@ -218,9 +215,6 @@ var boardController = (function () {
         let hasUser = await this.user.checkUserExistsById(userId);
         let hasBoard = await this.checkBoardExists(boardId);
         let userRole = await this.checkUserRole(boardId, authenticateUserId);
-        console.log(boardId);
-        console.log(userId);
-        
         if (hasUser && hasBoard && userRole.length > 0 && userRole[0].role_name == "ROLE_SUPER_ADMIN")
         {
             let query = "UPDATE board_user SET role_id='"+ roleId +"' WHERE board_id='" + boardId + "' && user_id='"+userId+"'";
