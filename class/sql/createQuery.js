@@ -3,7 +3,7 @@ var createQuery = {
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
         "first_name varchar(255), last_name varchar(255)," +
         "email varchar(255), password varchar(255), address varchar(255)," +
-        "start_date Date, end_date DATE, working BOOLEAN DEFAULT FALSE)",
+        "start_date Date, end_date DATE, working BOOLEAN DEFAULT FALSE, social_auth BOOLEAN DEFAULT FALSE, unique_identifier varchar(255))",
     createRoleTable: "CREATE TABLE role" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
         "role varchar(255))",

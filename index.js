@@ -21,7 +21,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 const corsOpts = {
-    origin: 'http://localhost:4200'
+    origin: 'http://localhost:5173'
 };
 app.use(cors(corsOpts), function (req, res, next) {
     console.log(req.url.split('/'));

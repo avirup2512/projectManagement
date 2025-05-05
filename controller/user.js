@@ -51,6 +51,53 @@ var userController = (function () {
                 return result;
             })
     };
+    user.prototype.authenticateUserByUniqueId = function (param) {
+        let result = new response("", 404, {});
+        let { email,uniqueIdentifier } = param;
+        return this.connection.query(this.connectionObject, "SELECT * FROM user WHERE email='" + email + "' AND unique_identifier='" + uniqueIdentifier + "'")
+            .then(function (data) {
+                if (data.length == 0) {
+                    result.message = false;
+                    result.status = 404
+                    return result;
+                }
+                else {
+                    result.message = true;
+                    result.data = data[0];
+                    result.status = 200;
+                    return result;
+                }
+            }).catch(function (err) {
+                result.message = false;
+                result.data = err;
+                return result;
+            })
+    };
+    user.prototype.login = async function (userEmail, userPassword) {
+        var result = await this.authenticateUser(userEmail, userPassword)
+        return result
+    }
+    user.prototype.getUserByEmail = function (userEmail) {
+        let result = new response("", 404, {});
+        return this.connection.query(this.connectionObject, "SELECT * FROM user WHERE email='" + userEmail + "'")
+            .then(function (data) {
+                if (data.length == 0) {
+                    result.message = false;
+                    result.status = 404
+                    return result;
+                }
+                else {
+                    result.message = true;
+                    result.data = data[0];
+                    result.status = 200;
+                    return result;
+                }
+            }).catch(function (err) {
+                result.message = false;
+                result.data = err;
+                return result;
+            })
+    };
     user.prototype.login = async function (userEmail, userPassword) {
         var result = await this.authenticateUser(userEmail, userPassword)
         return result
@@ -87,6 +134,52 @@ var userController = (function () {
         };
         let insertUserQuery = "INSERT INTO user (first_name,last_name,email,password,address)" +
             "VALUES('" + firstName + "','" + lastName + "','" + email + "','" + password + "','" + address + "')";
+        var hasUser = await this.checkUserExists(email);
+        if (hasUser)
+        {
+            res.message = "User is already exists";
+            res.status = 400;
+            return res;
+        } else {
+            var existsRole = await this.checkRole(role);
+            if (existsRole.message)
+            {
+                return this.connection.query(this.connectionObject, insertUserQuery)
+                .then(function (data) {
+                res.message = "User Has been created";
+                res.status = 200;
+                res.data = data;
+                return self.connection.query(self.connectionObject, "INSERT INTO user_role(roleId,userId) VALUES(" + existsRole.role.id + "," + data.insertId + ")")
+                    .then(function (data) {
+                        return res;
+                    }).catch(function (err) {
+                    res.message = err;
+                    res.status = 400;
+                    return res;
+                })
+                }).catch(function (err) {
+                    res.message = err;
+                    res.status = 400;
+                    return res;
+                })
+            } else {
+                res.message = "Role does not exists";
+                res.status = 400;
+                return res;
+            }
+        }
+    }
+    user.prototype.createUserFromSocialAuth = async function (param)
+    {
+        var self = this;
+        let res = new response();
+        let { firstName, lastName, email,address, role, uniqueIdentifier } = param;
+        if (!role)
+        {
+            role = "ROLE_BASIC";
+        };
+        let insertUserQuery = "INSERT INTO user (first_name,last_name,email,address,social_auth,unique_identifier)" +
+            "VALUES('" + firstName + "','" + lastName + "','" + email + "','" + address + "'," + true + ",'" + uniqueIdentifier + "')";
         var hasUser = await this.checkUserExists(email);
         if (hasUser)
         {
