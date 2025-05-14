@@ -98,6 +98,31 @@ var userController = (function () {
                 return result;
             })
     };
+    user.prototype.getUserByKeyword = function (param) {
+        let { keyword, userEmail } = param;
+        let key = "" + keyword + "%";
+        console.log(userEmail);
+        
+        let result = new response("", 404, {});
+        return this.connection.query(this.connectionObject, "SELECT id,email,first_name,last_name FROM user WHERE email LIKE'" + key + "' AND NOT email='"+userEmail+"' LIMIT 10")
+            .then(function (data) {
+                if (data.length == 0) {
+                    result.message = false;
+                    result.status = 404
+                    return result;
+                }
+                else {
+                    result.message = true;
+                    result.data = data;
+                    result.status = 200;
+                    return result;
+                }
+            }).catch(function (err) {
+                result.message = false;
+                result.data = err;
+                return result;
+            })
+    };
     user.prototype.login = async function (userEmail, userPassword) {
         var result = await this.authenticateUser(userEmail, userPassword)
         return result

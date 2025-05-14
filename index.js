@@ -14,6 +14,7 @@ const authentication = require("./routes/authentication");
 const board = require("./routes/board");
 const list = require("./routes/list");
 const card = require("./routes/card");
+const setting = require("./routes/settings");
 var app = express();
 app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 app.use(express.json());
@@ -24,11 +25,9 @@ const corsOpts = {
     origin: 'http://localhost:5173'
 };
 app.use(cors(corsOpts), function (req, res, next) {
-    console.log(req.url.split('/'));
     if (req.url.split('/')[1] !== "auth")
-    {
+    {        
         const token = req.headers.authorization ? req.headers.authorization.split(' ')[1] : null;
-        console.log(token);
         if (!token)
         {
             let err = "Token is needed";
@@ -37,9 +36,7 @@ app.use(cors(corsOpts), function (req, res, next) {
         }else
         {
             try {
-                const decodedToken = jwt.verify(token, "SECRET");
-                console.log(decodedToken);
-                
+                const decodedToken = jwt.verify(token, "SECRET");                
                 let { userEmail, password } = decodedToken;
                 const con = new connection(mysql);
                 let connect = con.getConnection();
@@ -54,7 +51,6 @@ app.use(cors(corsOpts), function (req, res, next) {
                         } else {
                             req.authenticatedUser = {userEmail, id:data[0].id};
                             next();
-                            //con.stop(connect);
                         }
                         }).catch(function (err) {
                             console.log(err);
@@ -78,7 +74,8 @@ app.use(cors(corsOpts), function (req, res, next) {
 app.use('/auth', cors(corsOpts), authentication);
 app.use('/board', cors(corsOpts), board);
 app.use('/list', cors(corsOpts), list);
-app.use('/card',cors(corsOpts), card);
+app.use('/card', cors(corsOpts), card);
+app.use("/setting", cors(corsOpts), setting);
 app.listen(port, () => {
     console.log("App has been started.");
 })

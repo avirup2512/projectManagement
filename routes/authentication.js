@@ -87,7 +87,8 @@ router.post('/login', async function (req, res) {
                 .json({
                     success:result.status == 200 ?  true : false,
                     token: token,
-                    status:result.status
+                    status: result.status,
+                    data:"Login Successfull."
                 })
             }catch (err) {
                 const error = new Error("Error ! Something went wrong");
@@ -229,7 +230,7 @@ router.post('/createUser', async function (req, res) {
     }
     
 })
-/** GET Methods */
+/** POST Methods */
     /**
      * @openapi
      * '/auth/getUser':
@@ -305,4 +306,76 @@ router.post('/getUser', async function (req, res) {
     }
     
 })
+/** POST Methods */
+    /**
+     * @openapi
+     * '/auth/search':
+     *  post:
+     *     tags:
+     *     - User Controller
+     *     summary: Search a user
+     *     security:
+     *          bearerAuth: [read]
+     *     requestBody:
+     *      required: true
+     *      content:
+     *        application/json:
+     *           schema:
+     *            type: object
+     *            required:
+     *              - firstName
+     *              - lastName
+     *              - email
+     *              - password
+     *              - address
+     *            properties:
+     *              firstName:
+     *                type: string
+     *                default: john
+     *              lastName:
+     *                type: string
+     *                default: doe
+     *              email:
+     *                type: string
+     *                default: johndoe@mail.com
+     *              password:
+     *                type: string
+     *                default: johnDoe20!@
+     *              address:
+     *                type: string
+     *                default: kolkata
+     *     responses:
+     *      201:
+     *        description: Created
+     *      409:
+     *        description: Conflict
+     *      404:
+     *        description: Not Found
+     *      500:
+     *        description: Server Error
+     */
+    router.post('/search', async function (req, res) {
+        const token = req.headers.authorization ? req.headers.authorization.split(' ')[1] : null;
+        let { keyword } = req.body;
+        const decodedToken = jwt.verify(token, "SECRET");                
+        let { userEmail, password } = decodedToken;
+        Object.assign(req.body, { userEmail })
+        if ( !keyword) {
+            res.status(400)
+            .send(new error("Send Proper data."));
+            return;
+        } else {
+            try {
+                let userDetails = await user.getUserByKeyword(req.body);
+                console.log(userDetails);
+                res.status(userDetails.status)
+                .send(userDetails)
+            } catch (err) {
+                console.log(err);
+                
+                res.status(400)
+                .send(new error(err));
+            }
+        }
+    })
 module.exports = router;
