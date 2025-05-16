@@ -11,6 +11,39 @@ var listController = (function () {
         this.connectionObject = connectionObject;
         this.board = new boardController(this.connection,this.connectionObject)
     }
+    const updatePosition = async function (idx,lists,self)
+    {
+        let res = new response();
+        if (idx > lists.length - 1)
+        {
+            return [];
+        }
+        const query = "UPDATE list SET position=" + lists[idx].position + " WHERE id=" + lists[idx].id + "";
+        const pr1 = new Promise((resolve, reject) => {
+            try {
+                self.connection.query(self.connectionObject, query).
+                then((data) => {
+                    res.message = "Position has been updated";
+                    res.status = 200;
+                    res.data = data;
+                    resolve(res);
+            })
+            } catch (error) {
+                console.log(err);
+                res.message = err;
+                res.status = 400;
+                reject(res);
+            }
+        })
+        const pr2 = updatePosition(idx + 1, lists, self);
+        return Promise.all([pr1, pr2]).then(([value, rest]) => {
+            let arr = [value, ...rest];
+            let response = arr.reduce((e,j) => {
+                return Object.assign(e,j)
+            })
+            return [response];
+        })
+    }
     list.prototype.checkListExists = async function (listId) {
         return this.connection.query(this.connectionObject,"SELECT * FROM list WHERE id='" + listId + "'")
             .then(function (data) {
@@ -97,6 +130,29 @@ var listController = (function () {
             return res;
         }
     }
+    list.prototype.updatePosition = async function (param)
+    {
+        let self = this;
+        let res = new response();
+        let { userId, boardId,lists } = param;
+        var checkBoardExists = await this.board.checkBoardExists(boardId);
+        if(checkBoardExists)
+        {
+            var userIsAuthenticated = await this.board.checkUserIsAuthenticated(boardId,userId);
+            var userRole = await this.board.checkUserRole(boardId, userId);
+            if (userIsAuthenticated && userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" || userRole[0].role_name == "ROLE_ADMIN")) {
+                return updatePosition(0, lists, self);
+            } else {
+                res.message = "User not authorized";
+                res.status = 403;
+                return [res];
+            }
+        }else {
+            res.message = "Board does not exists.";
+            res.status = 403;
+            return [res];
+        }
+        }
     list.prototype.deleteList = async function (param)
     {
         var self = this;

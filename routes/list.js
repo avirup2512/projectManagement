@@ -153,6 +153,75 @@ router.put('/edit', async function (req, res) {
         }
     }
 })
+/** PUT Methods */
+    /**
+     * @openapi
+     * '/list/updatePosition':
+     *  put:
+     *     tags:
+     *     - List Controller
+     *     summary: Update list position
+     *     security:
+     *          bearerAuth: [read]
+     *     requestBody:
+     *      required: true
+     *      content:
+     *        application/json:
+     *           schema:
+     *            type: object
+     *            required:
+     *              - name
+     *              - listId
+     *              - position
+     *              - boardId
+     *            properties:
+     *              firstName:
+     *                type: string
+     *                default: john
+     *              lastName:
+     *                type: string
+     *                default: doe
+     *              email:
+     *                type: string
+     *                default: johndoe@mail.com
+     *              password:
+     *                type: string
+     *                default: johnDoe20!@
+     *              address:
+     *                type: string
+     *                default: kolkata
+     *     responses:
+     *      201:
+     *        description: Created
+     *      409:
+     *        description: Conflict
+     *      404:
+     *        description: Not Found
+     *      500:
+     *        description: Server Error
+     */
+    router.put('/updatePosition', async function (req, res) {
+        let { boardId,lists } = req.body;
+        Object.assign(req.body, { userId: req.authenticatedUser.id })
+        if (!req.authenticatedUser || !boardId || !lists ) {
+            res.status(400)
+            .send(new error("Send Proper data."));
+            return;
+        } else {
+            try {
+                var response = await list.updatePosition(req.body);
+                console.log(response);
+                
+                res.status(response[0].status)
+                .send(response[0])
+            } catch (err) {
+                console.log(err);
+                
+                res.status(400)
+                .send(new error(err));
+            }
+        }
+    })
 /** DELETE Methods */
     /**
      * @openapi

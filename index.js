@@ -54,7 +54,8 @@ app.use(cors(corsOpts), function (req, res, next) {
                         }
                         }).catch(function (err) {
                             console.log(err);
-                    })
+                        })
+                    
                 } catch (r) {
                     let err = new error(r);
                     res.status(400)
