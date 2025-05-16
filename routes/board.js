@@ -142,9 +142,13 @@ router.put('/edit', async function (req, res) {
     } else {
         try {
             var response = await board.editBoard(req.body);
-            res.status(response.status)
-            .send(response)
+            console.log(response);
+            
+            res.status(response[0].status)
+                .send(response[0])
         } catch (err) {
+            console.log(err);
+            
             res.status(400)
             .send(new error(err));
         }
@@ -225,6 +229,8 @@ router.delete('/delete', async function (req, res) {
      *      500:
      */
 router.get('/getAllBoard', async function (req, res) {
+    console.log(req.authenticatedUser.id);
+    
     Object.assign(req.body, { userId: req.authenticatedUser.id })
     if (!req.authenticatedUser) {
         res.status(400)

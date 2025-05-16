@@ -42,7 +42,7 @@ app.use(cors(corsOpts), function (req, res, next) {
                 let connect = con.getConnection();
                 con.connect(connect);
                 try {
-                    con.query(connect, "SELECT id,email, password FROM user")
+                    con.query(connect, "SELECT id,email, password FROM user WHERE email='"+userEmail+"'")
                         .then(function (data) {
                         if (!data || data.length == 0) {
                             let err = new error("User does'nt exists");
@@ -92,7 +92,6 @@ async function createTables()
         con.createTable(connectionObject, createQuery.createRoleTable)
             .then(function (data) {
                 var queryString = "INSERT INTO role (role) VALUES ('ROLE_BASIC'),('ROLE_ADMIN'),('ROLE_SUPER_ADMIN')";
-                console.log(data);
                 con.query(connectionObject, queryString)
                 .then(function (data) {
                     console.log(data);

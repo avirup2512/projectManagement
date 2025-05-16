@@ -67,7 +67,7 @@ router.use((req, res, next) => {
      *        description: Server Error
      */
 router.post('/create', async function (req, res) {
-    let { name, boardId,position } = req.body;
+    let { name, boardId, position } = req.body; 
     Object.assign(req.body, { userId: req.authenticatedUser.id })
     if (!req.authenticatedUser || !name || !boardId || !position) {
         res.status(400)
@@ -228,16 +228,16 @@ router.delete('/delete', async function (req, res) {
      *        description: Not Found
      *      500:
      */
-router.get('/getAllList', async function (req, res) {
-    let { boardId } = req.body;
-    Object.assign(req.body, { userId: req.authenticatedUser.id })
+router.get('/getAllList/:boardId', async function (req, res) {
+    let { boardId } = req.params;
+    Object.assign(req.params, { userId: req.authenticatedUser.id })
     if (!req.authenticatedUser || !boardId ) {
         res.status(400)
         .send(new error("Send Proper data."));
         return;
     } else {
         try {
-            var response = await list.getAllList(req.body);
+            var response = await list.getAllList(req.params);
             res.status(response.status)
             .send(response)
         } catch (err) {

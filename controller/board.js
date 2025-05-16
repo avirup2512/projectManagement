@@ -19,7 +19,7 @@ var boardController = (function () {
             return [];
         }
         let insertBoardUserQuery = "INSERT INTO board_user (user_id,board_id,role_id)" +
-            "VALUES('" +  users[idx].id + "','" + boardId + "','"+ users[idx].role_id +"')";
+            "VALUES('" +  users[idx].user_id + "','" + boardId + "','"+ users[idx].role +"') ON DUPLICATE KEY UPDATE role_id = VALUES(role_id)";
         let pr = new Promise((resolve, reject) => {
                 self.connection.query(self.connectionObject, insertBoardUserQuery)
                 .then(function (data3) {  
@@ -43,7 +43,39 @@ var boardController = (function () {
             })
             return [response];
         });
-    }    
+    }
+    const deleteBoardUser = function (idx, users,boardId,self)
+    {
+        let res = new response();
+        if(idx > users.length-1)
+        {
+            return [];
+        }
+        let insertBoardUserQuery = "DELETE FROM board_user WHERE board_id= '"+boardId+"' AND user_id = '"+users[idx].user_id+"'";
+        let pr = new Promise((resolve, reject) => {
+                self.connection.query(self.connectionObject, insertBoardUserQuery)
+                .then(function (data3) {  
+                data3.boardId = boardId;      
+                res.message = "Board Has been deleted";
+                res.status = 200;
+                res.data = data3;
+                resolve(res);
+                }).catch(function (err) {
+                console.log(err);
+                res.message = err;
+                res.status = 400;
+                reject(res);
+            })
+        })
+        let pr2 = addBoardUser(idx+1, users,boardId,self)
+        return Promise.all([pr, pr2]).then(([value, rest]) => { 
+            let arr = [value, ...rest];
+            let response = arr.reduce((e,j) => {
+                return Object.assign(e,j)
+            })
+            return [response];
+        });
+    } 
     board.prototype.checkUserIsAuthenticated = async function (boardId,userId) {
         return this.connection.query(this.connectionObject,"SELECT user_id FROM board WHERE id='" + boardId + "' && user_id='"+userId+"'")
             .then(function (data) {
@@ -125,7 +157,7 @@ var boardController = (function () {
                         if (e.role == "ROLE_SUPER_ADMIN")
                         roleId = e.id;
                     })
-                    users.push({ id: userId, role_id: roleId });
+                    users.push({ user_id: userId, role: roleId });
                     return addBoardUser(0, users, data.insertId, self);
                 }).catch(function (err) {
                 console.log(err);
@@ -146,7 +178,7 @@ var boardController = (function () {
     {
         let self = this;
         let res = new response();
-        let { boardId, name, isPublic, users } = param;  
+        let { boardId, name, isPublic, users,userId } = param;  
         if (!users)
         {
             users = [];
@@ -160,16 +192,62 @@ var boardController = (function () {
         {
             return this.connection.query(this.connectionObject, updateUserQuery)
                 .then(function (data) {
-                    return addBoardUser(0, users, boardId, self);
-                    // res.message = "Board Has been updated";
-                    // res.status = 200;
-                    // res.data = data;
-                    // return res;
+                    let selectExistingQuery = "SELECT user_id from board_user WHERE board_id='" + boardId + "' AND NOT user_id='"+userId+"' ";
+                    return self.connection.query(self.connectionObject, selectExistingQuery)
+                        .then(function (existingUser) {
+                            console.log(existingUser);
+                            
+                            let incomingUserMap = new Map();
+                            users.forEach((e) => {
+                                incomingUserMap.set(e.user_id, { user_id: e.user_id, role: e.role });
+                            })
+                            let existingUserMap = new Map();
+                            existingUser.forEach((e) => {
+                                existingUserMap.set(e.user_id, { user_id: e.user_id, role: e.role });
+                            })
+                            console.log(incomingUserMap);
+                            
+                            let userToBeDeleted = [];
+                            let userToAddedd = [];
+                            if(existingUser.length > 0)
+                            {
+                                existingUser.forEach((e) => {
+                                    if (!incomingUserMap.has(e.user_id)) {
+                                        userToBeDeleted.push({user_id:e.user_id});
+                                    } else {
+                                        userToAddedd.push(incomingUserMap.get(e.user_id))
+                                    }
+                                });
+                            } else {
+                                userToAddedd = users;
+                            }
+                            if (users.length > 0)
+                            {
+                                users.forEach((e) => {
+                                    if (!existingUserMap.has(e.user_id)) {
+                                        userToAddedd.push(e);
+                                    }
+                                });
+                            }
+                            return Promise.all([addBoardUser(0, userToAddedd, boardId, self), deleteBoardUser(0, userToBeDeleted, boardId, self)])
+                                .then(([value, rest]) => { 
+                                let arr = [value, ...rest];
+                                let response = arr.reduce((e,j) => {
+                                    return Object.assign(e,j)
+                                })
+                                    console.log("JI");
+                                    
+                                    console.log(response);
+                                if (response.length == 0)
+                                    return [{status:200}]
+                                return [...response];
+                            });
+                    });
                 });
         } else {
             res.message = "User is not authorized.";
             res.status = 403;
-            return res;
+            return [res];
         }
     }
     board.prototype.deleteBoard = async function (param)
@@ -198,16 +276,16 @@ var boardController = (function () {
     }
     board.prototype.getAllBoard = async function (param)
     {
+        console.log("USER_ID");
         let res = new response();
         let { userId } = param;        
-        let query = "SELECT  b.id AS board_id, b.name AS board_name, bu.user_id AS board_user_id, u.first_name, u.last_name, r.role, r.id as role_id FROM  board b JOIN  board_user bu ON b.id = bu.board_id JOIN user u on u.id = bu.user_id  JOIN  role r ON bu.role_id = r.id "+
+        console.log(userId);
+        let query = "SELECT  b.id AS board_id, b.user_id, b.name AS board_name, bu.user_id AS board_user_id, u.first_name, u.last_name, r.role, r.id as role_id FROM  board b JOIN  board_user bu ON b.id = bu.board_id JOIN user u on u.id = bu.user_id  JOIN  role r ON bu.role_id = r.id "+
         "WHERE b.id IN (SELECT board_id FROM board_user WHERE user_id = "+userId+") "+
         "ORDER BY b.id";       
         return this.connection.query(this.connectionObject, query)
             .then(function (data) {
                 let boardResponse = {};
-                console.log(data);
-                
                 data.forEach((e) => {
                 if (!boardResponse.hasOwnProperty(e.board_id))
                 {
@@ -215,12 +293,14 @@ var boardController = (function () {
                 }
                     boardResponse[e.board_id].name = e.board_name;
                     boardResponse[e.board_id].id = e.board_id;
+                    boardResponse[e.board_id].board_user_id = e.user_id;
+                    const creator = e.user_id == e.board_user_id ? true : false;
                 if (boardResponse[e.board_id].user && boardResponse[e.board_id].user.length > 0)
                 {
-                    boardResponse[e.board_id].user.push({ id: e.board_user_id, role: e.role, role_id:e.role_id, first_name: e.first_name, last_name: e.last_name, email: e.email });
+                    boardResponse[e.board_id].user.push({ id: e.board_user_id, role: e.role, role_id:e.role_id, first_name: e.first_name, last_name: e.last_name, email: e.email, creator });
                 } else {
                     boardResponse[e.board_id].user = [];
-                    boardResponse[e.board_id].user.push({id:e.board_user_id,role:e.role, role_id:e.role_id, first_name:e.first_name, last_name:e.last_name,email:e.email})
+                    boardResponse[e.board_id].user.push({id:e.board_user_id,role:e.role, role_id:e.role_id, first_name:e.first_name, last_name:e.last_name,email:e.email, creator})
                 }
             })
             res.message = "Board Has been fetched";
