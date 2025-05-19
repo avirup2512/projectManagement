@@ -156,6 +156,44 @@ var cardController = (function () {
             return res;
         }
     }
+    card.prototype.setCardStatus = async function (param)
+    {
+        let self = this;
+        let res = new response();
+        let { userId, listId,boardId,isComplete,cardId } = param;
+        var checkBoardExists = await this.board.checkBoardExists(boardId);
+        var checkListExists = await this.checkListExists(listId);
+        if(checkBoardExists && checkListExists)
+        {
+            var userIsAuthenticated = await this.board.checkUserIsAuthenticated(boardId,userId);
+            var userRole = await this.board.checkUserRole(boardId, userId);
+            if (userIsAuthenticated && userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" || userRole[0].role_name == "ROLE_ADMIN"))
+            {
+                let insertBoardQuery = "UPDATE card"+
+                                " SET is_complete = ?"+
+                                " WHERE id = ?"
+                return this.connection.queryByArray(this.connectionObject, insertBoardQuery, [isComplete,cardId])
+                .then(function (data) {                
+                res.message = "Card Has been updated";
+                res.status = 200;
+                    res.data = data;
+                    return res;
+                }).catch(function (err) {
+                    res.message = err;
+                    res.status = 406;
+                    return res;
+                })
+            }else {
+                res.message = "User is not authorized.";
+                res.status = 403;
+                return res;
+            }
+        }else {
+            res.message = "Board does not exists.";
+            res.status = 403;
+            return res;
+        }
+    }
     card.prototype.addUser = async function (param)
     {
         let res = new response();

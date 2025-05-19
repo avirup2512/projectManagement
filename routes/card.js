@@ -153,6 +153,72 @@ router.put('/edit', async function (req, res) {
         }
     }
 })
+/** PUT Methods */
+    /**
+     * @openapi
+     * '/card/setStatus':
+     *  put:
+     *     tags:
+     *     - Card Controller
+     *     summary: Edit a card
+     *     security:
+     *          bearerAuth: [read]
+     *     requestBody:
+     *      required: true
+     *      content:
+     *        application/json:
+     *           schema:
+     *            type: object
+     *            required:
+     *              - name
+     *              - listId
+     *              - position
+     *              - boardId
+     *            properties:
+     *              firstName:
+     *                type: string
+     *                default: john
+     *              lastName:
+     *                type: string
+     *                default: doe
+     *              email:
+     *                type: string
+     *                default: johndoe@mail.com
+     *              password:
+     *                type: string
+     *                default: johnDoe20!@
+     *              address:
+     *                type: string
+     *                default: kolkata
+     *     responses:
+     *      201:
+     *        description: Created
+     *      409:
+     *        description: Conflict
+     *      404:
+     *        description: Not Found
+     *      500:
+     *        description: Server Error
+     */
+    router.put('/setStatus', async function (req, res) {
+        let {boardId,listId,isComplete,cardId } = req.body;
+        Object.assign(req.body, { userId: req.authenticatedUser.id })
+        if (!req.authenticatedUser || isComplete == undefined || !boardId || !listId || !cardId) {
+            res.status(400)
+            .send(new error("Send Proper data."));
+            return;
+        } else {
+            try {
+                var response = await card.setCardStatus(req.body);
+                res.status(response.status)
+                .send(response)
+            } catch (err) {
+                console.log(err);
+                res.status(400)
+                .send(new error(err));
+            }
+        }
+    })
 /** DELETE Methods */
     /**
      * @openapi
@@ -203,11 +269,11 @@ router.delete('/delete', async function (req, res) {
 /** GET Methods */
     /**
      * @openapi
-     * '/list/getAllList':
+     * '/card/getAllCard/:listId/:boardId':
      *  get:
      *     tags:
-     *     - List Controller
-     *     summary: Get all list
+     *     - Card Controller
+     *     summary: Get all Card
      *     security:
      *          bearerAuth: [read]
      *     requestBody:
@@ -228,16 +294,16 @@ router.delete('/delete', async function (req, res) {
      *        description: Not Found
      *      500:
      */
-router.get('/getAllList', async function (req, res) {
-    let { boardId } = req.body;
-    Object.assign(req.body, { userId: req.authenticatedUser.id })
-    if (!req.authenticatedUser || !boardId ) {
+router.get('/getAllCard/:listId/:boardId', async function (req, res) {
+    let { listId,boardId } = req.params;
+    Object.assign(req.params, { userId: req.authenticatedUser.id })
+    if (!req.authenticatedUser || !listId || !boardId ) {
         res.status(400)
         .send(new error("Send Proper data."));
         return;
     } else {
         try {
-            var response = await list.getAllList(req.body);
+            var response = await card.getAllCards(req.params);
             res.status(response.status)
             .send(response)
         } catch (err) {
