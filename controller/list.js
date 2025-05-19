@@ -98,7 +98,8 @@ var listController = (function () {
     {
         let self = this;
         let res = new response();
-        let { userId, name, boardId,listId, position } = param;
+        let { userId, name, boardId, listId, position } = param;
+        
         var checkBoardExists = await this.board.checkBoardExists(boardId);
         var listExists = await this.checkListExists(listId);
         if(checkBoardExists && listExists)
@@ -107,7 +108,12 @@ var listController = (function () {
             var userRole = await this.board.checkUserRole(boardId, userId);
             if (userIsAuthenticated && userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" || userRole[0].role_name == "ROLE_ADMIN"))
             {
-                let insertBoardQuery = "UPDATE list SET name = '" + name + "',position = '" + position + "' WHERE id="+ listId +"";
+                let insertBoardQuery = "UPDATE list SET name = '" + name + "',position = " + position + " WHERE id="+ listId +"";
+                if (!position)
+                {
+                    insertBoardQuery = "UPDATE list SET name = '" + name + "' WHERE id="+ listId +"";
+
+                }
                 return this.connection.query(this.connectionObject, insertBoardQuery)
                 .then(function (data) {                
                 res.message = "List Has been updated";
@@ -185,15 +191,40 @@ var listController = (function () {
         let boardExists = await this.board.checkBoardExists(boardId);
         if (boardExists)
         {
-            let query = "SELECT * FROM list WHERE board_id=" + boardId + "";
+            let query = "SELECT l.*, c.id as card_id, c.name as card_name, c.list_id as card_list_id, c.description as card_description,c.is_complete as card_complete, c.reminder_date as card_reminder_date, c.due_date as card_due_date, c.create_date as card_create_date "+
+            "FROM list l left join card c on c.list_id = l.id WHERE board_id = " + boardId + " order by c.id";
             return this.connection.query(this.connectionObject, query)
-            .then(function (data) {                                    
-            res.message = "List Has been fetched";
-            res.status = 200;
-                res.data = data;
+                .then(function (data) {        
+                    let listObject = {};
+                    if (data.length > 0)
+                    {
+                        // data.reduce((a, b) => {
+                        //     if(a.id == b.id)
+                        // })
+                        data.forEach((e) => {
+                            if (!listObject.hasOwnProperty(e.id))
+                            {
+                                listObject[e.id] = {};
+                            }
+                            listObject[e.id].name = e.name;
+                            listObject[e.id].id = e.id;
+                            listObject[e.id].position = e.position;
+                            listObject[e.id].board_id = e.board_id;
+                            listObject[e.id].created_date = e.created_date;
+                            if (!listObject[e.id].hasOwnProperty("cards"))
+                            {
+                                listObject[e.id].cards = [];
+                            }
+                            if(e.card_id)
+                                listObject[e.id].cards.push({id:e.card_id,name:e.card_name,description:e.card_description, complete:e.card_complete})
+                        })
+                    }
+                    res.message = "List Has been fetched";
+                    res.status = 200;
+                    res.data = listObject;
                 return res;
             }).catch(function (err) {
-                console.log("err");
+                console.log(err);
                 
                 res.message = err;
                 res.status = 406;

@@ -51,9 +51,11 @@ app.use(cors(corsOpts), function (req, res, next) {
                         } else {
                             req.authenticatedUser = {userEmail, id:data[0].id};
                             next();
-                        }
+                            };
+                        con.stop(connect);
                         }).catch(function (err) {
                             console.log(err);
+                            con.stop(connect);
                         })
                     
                 } catch (r) {

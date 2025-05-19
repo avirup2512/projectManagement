@@ -88,7 +88,8 @@ router.post('/login', async function (req, res) {
                     success:result.status == 200 ?  true : false,
                     token: token,
                     status: result.status,
-                    data:"Login Successfull."
+                    message: "Login Successfull.",
+                    data:result.data
                 })
             }catch (err) {
                 const error = new Error("Error ! Something went wrong");

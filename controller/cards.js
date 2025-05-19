@@ -50,7 +50,7 @@ var cardController = (function () {
         let self = this;
         let res = new response();
         let { userId, name,listId,boardId,description,isActive,dueDate,reminderDate } = param;
-        var checkBoardExists = await this.board.checkBoardExists(listId);
+        var checkBoardExists = await this.board.checkBoardExists(boardId);
         var checkListExists = await this.checkListExists(listId);
         if(checkBoardExists && checkListExists)
         {
@@ -114,7 +114,7 @@ var cardController = (function () {
     {
         let self = this;
         let res = new response();
-        let { userId, name,listId,boardId,description,isActive,dueDate,reminderDate,cardId } = param;
+        let { userId, name,listId,boardId,description,isActive,isComplete,dueDate,reminderDate,cardId } = param;
         var checkBoardExists = await this.board.checkBoardExists(listId);
         var checkListExists = await this.checkListExists(listId);
         if(checkBoardExists && checkListExists)
@@ -124,13 +124,14 @@ var cardController = (function () {
             if (userIsAuthenticated && userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" || userRole[0].role_name == "ROLE_ADMIN"))
             {
                 let insertBoardQuery = "UPDATE card"+
-                                " SET list_id = ?, name = ?, description = ?, is_active = ?, due_date = ?, reminder_date = ?"+
+                                " SET list_id = ?, name = ?, description = ?, is_active = ?, is_complete = ?, due_date = ?, reminder_date = ?"+
                                 " WHERE id = ?"
                 return this.connection.queryByArray(this.connectionObject, insertBoardQuery, [
                     listId,
                     name,
                     description,
                     isActive,
+                    isComplete,
                     toMySQLDateTime(dueDate),
                     toMySQLDateTime(reminderDate),
                     cardId
@@ -278,24 +279,33 @@ var cardController = (function () {
     card.prototype.getAllCards = async function (param)
     {
         let res = new response();
-        let { boardId,listId } = param;    
+        let { boardId,listId,userId } = param;    
         let boardExists = await this.board.checkBoardExists(boardId);
         if (boardExists)
-        {
-            let query = "SELECT * FROM cards WHERE list_id=" + listId + "";
-            return this.connection.query(this.connectionObject, query)
-            .then(function (data) {                                    
-            res.message = "Cards Has been fetched";
-            res.status = 200;
-                res.data = data;
+        {            
+            var userIsAuthenticated = await this.board.checkUserIsAuthenticated(boardId, userId);
+            if (userIsAuthenticated)
+            {
+                let query = "SELECT * FROM card WHERE list_id=" + listId + "";
+                return this.connection.query(this.connectionObject, query)
+                .then(function (data) {                                    
+                res.message = "Cards Has been fetched";
+                res.status = 200;
+                    res.data = data;
+                    return res;
+                }).catch(function (err) {
+                    console.log("err");
+                    
+                    res.message = err;
+                    res.status = 406;
+                    return res;
+                })
+            } else {
+                res.message = "User is not authorized";
+                res.status = 403;
                 return res;
-            }).catch(function (err) {
-                console.log("err");
-                
-                res.message = err;
-                res.status = 406;
-                return res;
-            })
+            }
+            
         } else {
             res.message = "Board does not exists";
             res.status = 403;
