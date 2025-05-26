@@ -36,9 +36,9 @@ var createQuery = {
         "board_id int, name varchar(255), created_date DATETIME DEFAULT CURRENT_TIMESTAMP, position int," +
         "FOREIGN KEY (board_id) REFERENCES board(id))",
     createCardsTable: "CREATE TABLE card" +
-        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "(id int PRIMARY KEY AUTO_INCREMENT, user_id int "+
         "list_id int, name varchar(255),description varchar(255), create_date DATETIME DEFAULT CURRENT_TIMESTAMP," +
-        "is_active BOOLEAN DEFAULT true, is_complete BOOLEAN DEFAULT true, due_date DATETIME, reminder_date DATETIME," +
+        "is_active BOOLEAN DEFAULT true, is_complete BOOLEAN DEFAULT false, due_date DATETIME, reminder_date DATETIME," +
         "FOREIGN KEY (list_id) REFERENCES list(id))",
     createCardUserTable: "CREATE TABLE card_user" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+

@@ -313,6 +313,25 @@ router.get('/getAllCard/:listId/:boardId', async function (req, res) {
         }
     }
 })
+router.get('/getCardById/:boardId/:cardId', async function (req, res) {
+    let { boardId } = req.params;
+    Object.assign(req.params, { userId: req.authenticatedUser.id })
+    if (!req.authenticatedUser || !boardId ) {
+        res.status(400)
+        .send(new error("Send Proper data."));
+        return;
+    } else {
+        try {
+            var response = await card.getCardById(req.params);
+            res.status(response.status)
+            .send(response)
+        } catch (err) {
+            console.log(err);
+            res.status(344)
+            .send(new error(err));
+        }
+    }
+})
 /** POST Methods */
     /**
      * @openapi

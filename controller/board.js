@@ -76,9 +76,11 @@ var boardController = (function () {
             return [response];
         });
     } 
-    board.prototype.checkUserIsAuthenticated = async function (boardId,userId) {
-        return this.connection.query(this.connectionObject,"SELECT user_id FROM board WHERE id='" + boardId + "' && user_id='"+userId+"'")
-            .then(function (data) {
+    board.prototype.checkUserIsAuthenticated = async function (boardId, userId) {
+        let query = "SELECT (SELECT user_id FROM board WHERE id='" + boardId + "' && user_id='" + userId + "') as board" +
+                    "(SELECT user_id FROM board_user WHERE board_id='" + boardId + "' && user_id='" + userId + "') as board_user" 
+        return this.connection.query(this.connectionObject,query)
+            .then(function (data) {          
                 if (data.length == 0)
                     return false;
                 else

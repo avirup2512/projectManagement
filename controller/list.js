@@ -187,20 +187,19 @@ var listController = (function () {
     list.prototype.getAllList = async function (param)
     {
         let res = new response();
-        let { boardId } = param;    
+        let { boardId,userId } = param;    
         let boardExists = await this.board.checkBoardExists(boardId);
         if (boardExists)
         {
-            let query = "SELECT l.*, c.id as card_id, c.name as card_name, c.list_id as card_list_id, c.description as card_description,c.is_complete as card_complete, c.reminder_date as card_reminder_date, c.due_date as card_due_date, c.create_date as card_create_date "+
-            "FROM list l left join card c on c.list_id = l.id WHERE board_id = " + boardId + " order by c.id";
+            let query = "SELECT result.*,u.first_name,u.last_name,u.email, cu.id as card_user_id, cu.user_id as card_user_user_id FROM (SELECT l.*, c.id as card_id, c.name as card_name, c.list_id as card_list_id, c.description as card_description,c.is_complete as card_complete, c.reminder_date as card_reminder_date, c.due_date as card_due_date, c.create_date as card_create_date, c.user_id as card_creator "+
+            "FROM list l LEFT JOIN card c on c.list_id = l.id WHERE board_id = " + boardId + ") AS result LEFT JOIN card_user cu ON cu.card_id = result.card_id join user u on cu.user_id = u.id  order by result.card_id"; // WHERE cu.user_id = " + userId + "
             return this.connection.query(this.connectionObject, query)
-                .then(function (data) {        
+                .then(function (data) {    
+                    console.log(data);
+                    
                     let listObject = {};
                     if (data.length > 0)
                     {
-                        // data.reduce((a, b) => {
-                        //     if(a.id == b.id)
-                        // })
                         data.forEach((e) => {
                             if (!listObject.hasOwnProperty(e.id))
                             {
@@ -215,8 +214,12 @@ var listController = (function () {
                             {
                                 listObject[e.id].cards = [];
                             }
-                            if(e.card_id)
-                                listObject[e.id].cards.push({id:e.card_id,name:e.card_name,description:e.card_description, complete:e.card_complete})
+                            if (e.card_id && e.card_creator == userId)
+                            {
+                                const cardUser = [];                                
+                                cardUser.push({ user_id: e.card_user_user_id, name: e.first_name + " " + e.last_name, email: e.email })
+                                listObject[e.id].cards.push({id:e.card_id,name:e.card_name,description:e.card_description, complete:e.card_complete,users:cardUser})
+                            }
                         })
                     }
                     res.message = "List Has been fetched";
