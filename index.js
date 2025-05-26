@@ -24,7 +24,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const corsOpts = {
     origin: 'http://localhost:5173'
 };
-app.use(cors(corsOpts), function (req, res, next) {
+app.use(cors(), function (req, res, next) {
     if (req.url.split('/')[1] !== "auth")
     {        
         const token = req.headers.authorization ? req.headers.authorization.split(' ')[1] : null;
