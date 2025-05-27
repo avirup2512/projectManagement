@@ -19,6 +19,76 @@ var cardController = (function () {
         const date = new Date(isoString);
         return date.toISOString().slice(0, 19).replace('T', ' ');
     }
+    function addUserToCard(idx, users,cardId,self)
+    {
+        let res = new response();
+        if (idx > users.length - 1)
+        {
+            return [];
+        }
+        console.log("USERS");
+        console.log(users);
+        console.log("OYSER");
+        console.log(idx);
+        
+        let query = "INSERT INTO card_user (user_id,card_id,role_id)" +
+        "VALUES('" + users[idx].user_id + "','" + cardId + "','" + users[idx].roleId + "') ON DUPLICATE KEY UPDATE role_id = VALUES(role_id);";
+        const p1 = new Promise((resolve, reject) => {
+            self.connection.query(self.connectionObject, query)
+                .then(function (data3) {
+                    res.message = "Users Has been added";
+                    res.status = 200;
+                    res.data = data3;
+                    resolve(res);
+                }).catch(function (err) {
+                    res.message = err;
+                    res.status = 406;
+                    reject(res);
+                })
+        });
+        const p2 = addUserToCard(idx + 1, users, cardId, self);
+        return Promise.all([p1, p2]).then(([value, rest]) => { 
+            let arr = [value, ...rest];
+            let response = arr.reduce((e,j) => {
+                return Object.assign(e,j)
+            })
+            return [response];
+        });
+    }
+    const deleteUserToCard = function (idx, users,cardId,self)
+    {
+        console.log(users);
+        
+        let res = new response();
+        if(idx > users.length-1)
+        {
+            return [];
+        }
+        let insertBoardUserQuery = "DELETE FROM card_user WHERE card_id= '"+cardId+"' AND user_id = '"+users[idx].user_id+"'";
+        let pr = new Promise((resolve, reject) => {
+                self.connection.query(self.connectionObject, insertBoardUserQuery)
+                .then(function (data3) {  
+                data3.cardId = cardId;      
+                res.message = "Card Has been deleted";
+                res.status = 200;
+                res.data = data3;
+                resolve(res);
+                }).catch(function (err) {
+                console.log(err);
+                res.message = err;
+                res.status = 400;
+                reject(res);
+            })
+        })
+        let pr2 = deleteUserToCard(idx+1, users,cardId,self)
+        return Promise.all([pr, pr2]).then(([value, rest]) => { 
+            let arr = [value, ...rest];
+            let response = arr.reduce((e,j) => {
+                return Object.assign(e,j)
+            })
+            return [response];
+        });
+    } 
      card.prototype.checkUserRole = async function (cardId, userId) {
         let query = "SELECT DISTINCT r.role AS role_name " +
             "FROM card_user cu " +
@@ -196,35 +266,104 @@ var cardController = (function () {
             return res;
         }
     }
-    card.prototype.addUser = async function (param)
+    card.prototype.addUsers = async function (param)
     {
+        let self = this;
         let res = new response();
-        let { authenticateUserId, userId, listId, roleId,cardId,boardId } = param;
-        let hasUser = await this.user.checkUserExistsById(userId);
+        let { authenticateUserId,users,cardId,boardId } = param;
+        let hasUser = await this.user.checkUserExistsById(authenticateUserId);
         let userRoleForBoard = await this.board.checkUserRole(boardId, authenticateUserId);
         let userRole = await this.checkUserRole(cardId, authenticateUserId);
         if (hasUser && (userRoleForBoard.length > 0 && userRoleForBoard[0].role_name == "ROLE_SUPER_ADMIN") && (userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" || userRole[0].role_name == "ROLE_ADMIN")))
         {
-            let query = "INSERT INTO card_user (user_id,card_id,role_id)" +
-                "VALUES('" + userId + "','" + cardId + "','" + roleId + "')";
-                return this.connection.query(this.connectionObject, query)
-                .then(function (data3) {                
-                res.message = "Users Has been added";
-                res.status = 200;
-                    res.data = data3;
-                    return res;
-                }).catch(function (err) {
-                    res.message = err;
-                    res.status = 406;
-                    return res;
+            let selectExistingQuery = "SELECT user_id,role_id from card_user WHERE card_id='" + cardId + "' AND NOT user_id='"+authenticateUserId+"' ";
+            return self.connection.query(self.connectionObject, selectExistingQuery)
+            .then(function (existingUser) {                            
+                let incomingUserMap = new Map();
+                users.forEach((e) => {
+                    incomingUserMap.set(e.user_id, { user_id: e.user_id, roleId: e.roleId });
+                })
+                let existingUserMap = new Map();
+                existingUser.forEach((e) => {
+                    existingUserMap.set(e.user_id, { id: e.user_id, role: e.role_id });
+                })
+                // console.log(incomingUserMap);
+                            
+                let userToBeDeleted = [];
+                let userToAddedd = [];
+                if(existingUser.length > 0)
+                {
+                    existingUser.forEach((e) => {
+                        if (!incomingUserMap.has(e.user_id)) {
+                            userToBeDeleted.push({user_id:e.user_id});
+                        } else {
+                            userToAddedd.push(incomingUserMap.get(e.user_id))
+                        }
+                    });
+                } else {
+                    userToAddedd = users;
+                }
+                if (users.length > 0)
+                {
+                    users.forEach((e) => {
+                        if (!existingUserMap.has(e.user_id)) {
+                            userToAddedd.push(e);
+                        }
+                    });
+                }
+                return Promise.all([addUserToCard(0, userToAddedd, cardId, self), deleteUserToCard(0, userToBeDeleted, cardId, self)])
+                    .then(([value, rest]) => { 
+                    let arr = [value, ...rest];
+                    let response = arr.reduce((e,j) => {
+                        return Object.assign(e,j)
+                    })
+                    if (response.length == 0)
+                        return [{status:200}]
+                    return [...response];
+                });
             })
-
+            // users.push({ user_id: userId, role: roleId });
+            return addUserToCard(0, users, cardId, self);
         }else {
             res.message = "User is not authorized.";
             res.status = 403;
             return res;
         }
-    }    
+    }
+    card.prototype.addTag = async function (param)
+    {
+        let self = this;
+        let res = new response();
+        let { authenticateUserId,tag,cardId,boardId } = param;
+        let hasUser = await this.user.checkUserExistsById(authenticateUserId);
+        let userRoleForBoard = await this.board.checkUserRole(boardId, authenticateUserId);
+        let userRole = await this.checkUserRole(cardId, authenticateUserId);
+        if (hasUser && (userRoleForBoard.length > 0 && userRoleForBoard[0].role_name == "ROLE_SUPER_ADMIN") && (userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" || userRole[0].role_name == "ROLE_ADMIN")))
+        {
+            let query = "INSERT INTO tag (tag) VALUES('"+tag+"')";
+            return self.connection.query(self.connectionObject, query)
+                .then(function (tag) {
+                    const query2 = "INSERT INTO card_tag (card_id, tag_id) VALUES(" + cardId + "," + tag.insertId + ")";
+                    return self.connection.query(self.connectionObject, query)
+                    .then(function (tag) {
+                        res.message = "Tag Has been added";
+                        res.status = 200;
+                        res.data = data;
+                        return res;
+                        })
+                    .catch((err) => {
+                        console.log(err);
+                    })
+            })
+            .catch((err) => {
+                console.log(err);
+            })
+        }else {
+            res.message = "User is not authorized.";
+            res.status = 403;
+            return res;
+        }
+    }   
     card.prototype.deleteCards = async function (param)
     {
         var self = this;
@@ -327,10 +466,12 @@ var cardController = (function () {
             if (userIsAuthenticated)
             {
                 
-                let query = "SELECT c.id,c.*, u.id as user_id, concat(u.first_name,' ', u.last_name) as full_name, u.email FROM card c join card_user cu on cu.card_id = c.id "+
-                "join user u on cu.user_id = u.id where c.id = " + cardId + " and c.user_id = " + userId + "";
+                let query = "SELECT c.id,c.*,c.user_id as creator, u.id as user_id, concat(u.first_name,' ', u.last_name) as full_name, u.email, cu.role_id, r.role as role_name FROM card c join card_user cu on cu.card_id = c.id "+
+                "join user u on cu.user_id = u.id join role r on r.id = cu.role_id where c.id = " + cardId + " and c.user_id = " + userId + "";
                 return this.connection.query(this.connectionObject, query)
-                .then(function (data) {                                    
+                    .then(function (data) {      
+                    console.log(data);
+                    
                 res.message = "Cards Has been fetched";
                 res.status = 200;                
                 const cardObject = {};
@@ -349,7 +490,8 @@ var cardController = (function () {
                     {
                         cardObject[e.id].users = [];
                     }
-                    cardObject[e.id].users.push({id:e.user_id,name:e.full_name,email:e.email})
+                    const creator = e.creator == e.user_id ? true : false;
+                    cardObject[e.id].users.push({id:e.user_id,name:e.full_name,email:e.email,creator,role_name:e.role_name, role:e.role_id})
                 })
                 res.data = cardObject; 
                 return res;

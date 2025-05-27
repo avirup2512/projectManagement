@@ -360,19 +360,24 @@ router.get('/getCardById/:boardId/:cardId', async function (req, res) {
      *        description: Not Found
      *      500:
      */
-router.post('/addUser', async function (req, res) {
+router.post('/addUsers', async function (req, res) {
     console.log("HI");
-    let { userId, cardId, roleId, boardId } = req.body;
+    let { cardId, users, boardId } = req.body;
     Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id })
-    if (!req.authenticatedUser || !userId || !cardId || !roleId || !boardId) {
+    if (!req.authenticatedUser || !cardId || !users || !boardId) {
         res.status(400)
         .send(new error("Send Proper data."));
         return;
     } else {
+        users = users.map((e) => ({ user_id: e.user_id, roleId: e.role }));
+        console.log(users);
+        Object.assign(req.body, { users:users })
         try {
-            var response = await card.addUser(req.body);
-            res.status(response.status)
-            .send(response)
+            var response = await card.addUsers(req.body);
+            console.log(response);
+            
+            res.status(response[0].status)
+            .send(response[0])
         } catch (err) {
             console.log(err);
             
@@ -411,7 +416,7 @@ router.post('/addUser', async function (req, res) {
      */
 router.put('/editUserRole', async function (req, res) {
     let { userId, boardId,cardId, roleId } = req.body;
-    Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id })
+    Object.assign(req.body, { userId: req.authenticatedUser.id })
     if (!req.authenticatedUser || !userId || !boardId || !cardId || !roleId ) {
         res.status(400)
         .send(new error("Send Proper data."));
@@ -421,6 +426,57 @@ router.put('/editUserRole', async function (req, res) {
             var response = await card.updateUserRole(req.body);
             res.status(response.status)
             .send(response)
+        } catch (err) {
+            console.log(err);
+            
+            res.status(344)
+            .send(new error(err));
+        }
+    }
+})
+/** POST Methods */
+    /**
+     * @openapi
+     * '/card/addTag':
+     *  POST:
+     *     tags:
+     *     - Card Controller
+     *     summary: Add Tags to card
+     *     security:
+     *          bearerAuth: [read]
+     *     requestBody:
+     *      required: true
+     *      content:
+     *        application/json:
+     *           schema:
+     *            type: object
+     *            required:
+     *              - cardId
+     *            properties:
+     *     responses:
+     *      201:
+     *        description: Created
+     *      409:
+     *        description: Conflict
+     *      404:
+     *        description: Not Found
+     *      500:
+     */
+
+router.post('/addTag', async function (req, res) {
+    let { cardId, tag, boardId } = req.body;
+    Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id })
+    if (!req.authenticatedUser || !cardId || !tag || !boardId) {
+        res.status(400)
+        .send(new error("Send Proper data."));
+        return;
+    } else {
+        try {
+            var response = await card.addTag(req.body);
+            console.log(response);
+            
+            res.status(response[0].status)
+            .send(response[0])
         } catch (err) {
             console.log(err);
             

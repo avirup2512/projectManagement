@@ -273,5 +273,27 @@ async function createTables()
                 console.log(err);
         })
     };
+    // TAG TABLE CREATE
+    var tagTableExists = await con.checkTableExists(connectionObject,dbName,"tag");
+    if(!tagTableExists)
+    {
+        con.createTable(connectionObject, createQuery.createTagTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
+    // CARD TAG TABLE CREATE
+    var cardTagTableExists = await con.checkTableExists(connectionObject,dbName,"card_tag");
+    if(!cardTagTableExists)
+    {
+        con.createTable(connectionObject, createQuery.createCardTagTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
 }
 createTables();

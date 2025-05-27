@@ -67,7 +67,7 @@ var boardController = (function () {
                 reject(res);
             })
         })
-        let pr2 = addBoardUser(idx+1, users,boardId,self)
+        let pr2 = deleteBoardUser(idx+1, users,boardId,self)
         return Promise.all([pr, pr2]).then(([value, rest]) => { 
             let arr = [value, ...rest];
             let response = arr.reduce((e,j) => {
@@ -196,9 +196,7 @@ var boardController = (function () {
                 .then(function (data) {
                     let selectExistingQuery = "SELECT user_id from board_user WHERE board_id='" + boardId + "' AND NOT user_id='"+userId+"' ";
                     return self.connection.query(self.connectionObject, selectExistingQuery)
-                        .then(function (existingUser) {
-                            console.log(existingUser);
-                            
+                        .then(function (existingUser) {                            
                             let incomingUserMap = new Map();
                             users.forEach((e) => {
                                 incomingUserMap.set(e.user_id, { user_id: e.user_id, role: e.role });
@@ -237,9 +235,6 @@ var boardController = (function () {
                                 let response = arr.reduce((e,j) => {
                                     return Object.assign(e,j)
                                 })
-                                    console.log("JI");
-                                    
-                                    console.log(response);
                                 if (response.length == 0)
                                     return [{status:200}]
                                 return [...response];
@@ -371,6 +366,28 @@ var boardController = (function () {
             res.status = 403;
             return res;
         }
+    }
+    board.prototype.getAllUser = async function (param)
+    {
+        let result = new response("", 404, {});
+        return this.connection.query(this.connectionObject, "SELECT u.* FROM user u join board_user bu on bu.user_id = u.id  WHERE bu.board_id="+boardId+"")
+            .then(function (data) {
+                if (data.length == 0) {
+                    result.message = false;
+                    result.status = 404
+                    return result;
+                }
+                else {
+                    result.message = true;
+                    result.data = data[0];
+                    result.status = 200;
+                    return result;
+                }
+            }).catch(function (err) {
+                result.message = false;
+                result.data = err;
+                return result;
+            })
     }
     return board;
 })();

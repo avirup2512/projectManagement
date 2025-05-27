@@ -104,7 +104,32 @@ var userController = (function () {
         console.log(userEmail);
         
         let result = new response("", 404, {});
-        return this.connection.query(this.connectionObject, "SELECT id,email,first_name,last_name FROM user WHERE email LIKE'" + key + "' AND NOT email='"+userEmail+"' LIMIT 10")
+        return this.connection.query(this.connectionObject, "SELECT id,email,first_name,last_name FROM user WHERE email LIKE'" + key + "' AND NOT email='"+userEmail+"' LIMIT 100")
+            .then(function (data) {
+                if (data.length == 0) {
+                    result.message = false;
+                    result.status = 404
+                    return result;
+                }
+                else {
+                    result.message = true;
+                    result.data = data;
+                    result.status = 200;
+                    return result;
+                }
+            }).catch(function (err) {
+                result.message = false;
+                result.data = err;
+                return result;
+            })
+    };
+    user.prototype.getBoardUserByKeyword = function (param) {
+        let { keyword, userEmail, boardId } = param;
+        let key = "" + keyword + "%";
+        console.log(userEmail);
+        
+        let result = new response("", 404, {});
+        return this.connection.query(this.connectionObject, "SELECT u.id,u.email,u.first_name,u.last_name FROM user u join board_user bu on bu.user_id = u.id  WHERE email LIKE'" + key + "' AND NOT email='"+userEmail+"' AND bu.board_id = "+ boardId +" LIMIT 100")
             .then(function (data) {
                 if (data.length == 0) {
                     result.message = false;

@@ -229,8 +229,6 @@ router.delete('/delete', async function (req, res) {
      *      500:
      */
 router.get('/getAllBoard', async function (req, res) {
-    console.log(req.authenticatedUser.id);
-    
     Object.assign(req.body, { userId: req.authenticatedUser.id })
     if (!req.authenticatedUser) {
         res.status(400)
@@ -338,6 +336,26 @@ router.put('/editUserRole', async function (req, res) {
     } else {
         try {
             var response = await board.updateUserRole(req.body);
+            res.status(response.status)
+            .send(response)
+        } catch (err) {
+            console.log(err);
+            
+            res.status(344)
+            .send(new error(err));
+        }
+    }
+})
+router.get('/getAllUser/:boardId', async function (req, res) {
+    let { boardId } = req.params;
+    Object.assign(req.params, { authenticateUserId: req.authenticatedUser.id })
+    if (!req.authenticatedUser || !boardId ) {
+        res.status(400)
+        .send(new error("Send Proper data."));
+        return;
+    } else {
+        try {
+            var response = await board.getAllUser(req.body);
             res.status(response.status)
             .send(response)
         } catch (err) {

@@ -35,6 +35,9 @@ var createQuery = {
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
         "board_id int, name varchar(255), created_date DATETIME DEFAULT CURRENT_TIMESTAMP, position int," +
         "FOREIGN KEY (board_id) REFERENCES board(id))",
+    createTagTable: "CREATE TABLE tag" +
+        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "tag varchar(255))",
     createCardsTable: "CREATE TABLE card" +
         "(id int PRIMARY KEY AUTO_INCREMENT, user_id int "+
         "list_id int, name varchar(255),description varchar(255), create_date DATETIME DEFAULT CURRENT_TIMESTAMP," +
@@ -47,6 +50,12 @@ var createQuery = {
         "FOREIGN KEY (card_id) REFERENCES card(id)," +
         "FOREIGN KEY (role_id) REFERENCES role(id)," +
         "UNIQUE (user_id, card_id))",
+    createCardTagTable: "CREATE TABLE card_tag" +
+        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "tag_id int, card_id int, " +
+        "FOREIGN KEY (tag_id) REFERENCES tag(id)," +
+        "FOREIGN KEY (card_id) REFERENCES card(id)," +
+        "UNIQUE (tag_id, card_id))",
     createCardLabelTable: "CREATE TABLE card_label" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
         "label_id int, card_id int," +
