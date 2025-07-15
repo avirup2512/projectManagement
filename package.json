@@ -25,6 +25,7 @@
     "kanban": "file:",
     "morgan": "~1.9.1",
     "mysql": "^2.18.1",
+    "mysql2": "^3.14.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   }
