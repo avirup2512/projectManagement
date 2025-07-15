@@ -485,4 +485,23 @@ router.post('/addTag', async function (req, res) {
         }
     }
 })
+router.delete('/deleteTag', async function (req, res) {
+    let { cardId, boardId, tagId } = req.body;
+    Object.assign(req.body, { userId: req.authenticatedUser.id })
+    if (!req.authenticatedUser || !cardId || !boardId || !tagId) {
+        res.status(400)
+        .send(new error("Send Proper data."));
+        return;
+    } else {
+        try {
+            var response = await card.removeTag(req.body);
+            res.status(response.status)
+            .send(response)
+        } catch (err) {
+            console.log(err);
+            res.status(400)
+            .send(new error(err));
+        }
+    }
+})
 module.exports = router;

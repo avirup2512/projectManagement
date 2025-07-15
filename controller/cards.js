@@ -26,11 +26,6 @@ var cardController = (function () {
         {
             return [];
         }
-        console.log("USERS");
-        console.log(users);
-        console.log("OYSER");
-        console.log(idx);
-        
         let query = "INSERT INTO card_user (user_id,card_id,role_id)" +
         "VALUES('" + users[idx].user_id + "','" + cardId + "','" + users[idx].roleId + "') ON DUPLICATE KEY UPDATE role_id = VALUES(role_id);";
         const p1 = new Promise((resolve, reject) => {
@@ -466,8 +461,8 @@ var cardController = (function () {
             if (userIsAuthenticated)
             {
                 
-                let query = "SELECT c.id,c.*,c.user_id as creator, u.id as user_id, concat(u.first_name,' ', u.last_name) as full_name, u.email, cu.role_id, r.role as role_name FROM card c join card_user cu on cu.card_id = c.id "+
-                "join user u on cu.user_id = u.id join role r on r.id = cu.role_id where c.id = " + cardId + " and c.user_id = " + userId + "";
+                let query = "SELECT c.id,c.*,c.user_id as creator, u.id as user_id, concat(u.first_name,' ', u.last_name) as full_name, u.email, cu.role_id, r.role as role_name, t.tag, t.id as tagId FROM card c join card_user cu on cu.card_id = c.id "+
+                "join user u on cu.user_id = u.id join role r on r.id = cu.role_id left join card_tag ct on ct.card_id = c.id left join tag t on t.id = ct.tag_id where c.id = " + cardId + " and c.user_id = " + userId + "";
                 return this.connection.query(this.connectionObject, query)
                     .then(function (data) {      
                     console.log(data);
@@ -475,6 +470,8 @@ var cardController = (function () {
                 res.message = "Cards Has been fetched";
                 res.status = 200;                
                 const cardObject = {};
+                let cardUserSet = new Set();
+                let cardTagSet = new Set();
                 data.forEach((e) => {
                     if (!cardObject.hasOwnProperty(e.id))
                     {
@@ -486,13 +483,25 @@ var cardController = (function () {
                     cardObject[e.id].reminder_date = e.reminder_date;
                     cardObject[e.id].description = e.description;
                     cardObject[e.id].complete = e.is_complete;
-                    if (!cardObject[e.id].hasOwnProperty("users"))
+
+                    // ADD USER
+                    cardObject[e.id].users = cardObject[e.id].hasOwnProperty("users") ? cardObject[e.id].users : [];
+                    if (!cardUserSet.has(e.user_id))
                     {
-                        cardObject[e.id].users = [];
+                        const creator = e.creator == e.user_id ? true : false;
+                        cardObject[e.id].users.push({ id: e.user_id, name: e.full_name, email: e.email, creator, role_name: e.role_name, role: e.role_id });
+                        cardUserSet.add(e.user_id);
                     }
-                    const creator = e.creator == e.user_id ? true : false;
-                    cardObject[e.id].users.push({id:e.user_id,name:e.full_name,email:e.email,creator,role_name:e.role_name, role:e.role_id})
-                })
+                    // ADD TAG
+                    cardObject[e.id].tags = cardObject[e.id].hasOwnProperty("tags") ? cardObject[e.id].tags : [];
+                    if (!cardTagSet.has(e.tagId))
+                        {
+                            const creator = e.creator == e.user_id ? true : false;
+                            cardObject[e.id].tags.push({ tagId: e.tagId, tagName: e.tag});
+                            cardTagSet.add(e.tagId);
+                        }
+                    
+                })                   
                 res.data = cardObject; 
                 return res;
                 }).catch(function (err) {
@@ -508,6 +517,42 @@ var cardController = (function () {
                     return res;
                 }
             
+        } else {
+            res.message = "Board does not exists";
+            res.status = 403;
+            return res;
+        }
+        
+    }
+    card.prototype.removeTag = async function (param)
+    {
+        let res = new response();
+        let { boardId,userId ,cardId,tagId} = param;    
+        let boardExists = await this.board.checkBoardExists(boardId);
+        if (boardExists)
+        {            
+            var userIsAuthenticated = await this.board.checkUserIsAuthenticated(boardId, userId);
+            if (userIsAuthenticated)
+            {
+                
+                let query = "DELETE t,ct FROM card_tag ct JOIN tag t ON ct.tag_id = t.id WHERE tag_id="+tagId+" AND card_id="+cardId+"";
+                return this.connection.query(this.connectionObject, query)
+                .then(function (data) {                          
+                    res.message = "Cards Has been deleted";
+                    res.status = 200;                
+                    res.data = data;
+                return res;
+                }).catch(function (err) {
+                    console.log(err);
+                    res.message = err;
+                    res.status = 406;
+                    return res;
+                })
+                } else {
+                    res.message = "User is not authorized";
+                    res.status = 403;
+                    return res;
+                }
         } else {
             res.message = "Board does not exists";
             res.status = 403;
