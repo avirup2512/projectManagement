@@ -1,6 +1,6 @@
 const express = require('express');
 const jwt = require("jsonwebtoken");
-const mysql = require('mysql');
+const mysql = require('mysql2');
 const connection = require("../class/sql/mysqlDbConnection");
 var router = express.Router();
 var error = require('../class/error');
