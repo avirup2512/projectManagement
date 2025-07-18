@@ -4,18 +4,17 @@ var connection = (function () {
     function mysqlConnectionInstance(mysql) {
         this.mysql = mysql;
     }
-    mysqlConnectionInstance.prototype.configure = function (host,user,pswd,db,port)
+    mysqlConnectionInstance.prototype.configure = function (host,user,pswd,db)
     {
         return this.mysql.createConnection({
         host: host,
         user: user,
         password: pswd,
-            database: db,
-        port:port
+        database: db
         });
     }
     mysqlConnectionInstance.prototype.getConnection = function () {
-        return this.configure('gondola.proxy.rlwy.net', 'root', 'bfLcmPbmyWpINusPpiPhAEnhbsEQjuaf', 'railway',27880);
+        return this.configure('localhost', 'root', '25126631', 'projectManagement');
     }
     
     mysqlConnectionInstance.prototype.connect = function (con)
