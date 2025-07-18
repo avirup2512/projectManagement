@@ -10,12 +10,11 @@ var connection = (function () {
         host: host,
         user: user,
         password: pswd,
-            database: db,
-        port:port
+        database: db,
         });
     }
     mysqlConnectionInstance.prototype.getConnection = function () {
-        return this.configure('gondola.proxy.rlwy.net', 'root', 'bfLcmPbmyWpINusPpiPhAEnhbsEQjuaf', 'railway',27880);
+        return this.configure('localhost', 'root', '25126631', `projectmanagement`);
     }
     
     mysqlConnectionInstance.prototype.connect = function (con)
