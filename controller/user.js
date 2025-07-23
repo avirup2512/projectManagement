@@ -100,7 +100,7 @@ var userController = (function () {
     };
     user.prototype.getUserByKeyword = function (param) {
         let { keyword, userEmail } = param;
-        let key = "" + keyword + "%";
+        let key = "%" + keyword + "%";
         console.log(userEmail);
         
         let result = new response("", 404, {});
@@ -125,7 +125,7 @@ var userController = (function () {
     };
     user.prototype.getBoardUserByKeyword = function (param) {
         let { keyword, userEmail, boardId } = param;
-        let key = "" + keyword + "%";
+        let key = "%" + keyword + "%";
         console.log(userEmail);
         
         let result = new response("", 404, {});

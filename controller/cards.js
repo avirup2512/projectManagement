@@ -50,6 +50,31 @@ var cardController = (function () {
             return [response];
         });
     }
+    card.prototype.checkTagIsExists = function(tagName)
+    {
+        return this.connection.query(this.connectionObject, "SELECT * FROM tag WHERE tag='" + tagName + "'")
+        .then(function (data) {
+            if (data.length == 0)
+                return false;
+            else
+                return true;
+        }).catch(function (err) {
+                return false;
+        })
+        
+    }
+    card.prototype.checkTagExistsInCard = function (tag,cardId)
+    {
+        return this.connection.query(this.connectionObject, "SELECT * FROM card_tag WHERE tag='" + tag + "' AND card_id='"+cardId+"'")
+        .then(function (data) {
+            if (data.length == 0)
+                return false;
+            else
+                return true;
+        }).catch(function (err) {
+                return false;
+        })
+    }
     const deleteUserToCard = function (idx, users,cardId,self)
     {
         console.log(users);
@@ -329,21 +354,24 @@ var cardController = (function () {
     {
         let self = this;
         let res = new response();
-        let { authenticateUserId,tag,cardId,boardId } = param;
+        let { authenticateUserId,tag,color,cardId,boardId } = param;
         let hasUser = await this.user.checkUserExistsById(authenticateUserId);
         let userRoleForBoard = await this.board.checkUserRole(boardId, authenticateUserId);
         let userRole = await this.checkUserRole(cardId, authenticateUserId);
-        if (hasUser && (userRoleForBoard.length > 0 && userRoleForBoard[0].role_name == "ROLE_SUPER_ADMIN") && (userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" || userRole[0].role_name == "ROLE_ADMIN")))
+        let tagExists = await this.checkTagIsExists(tag);
+        let tagExistsInCard = await this.checkTagExistsInCard(tag, cardId);
+        if (hasUser && (userRoleForBoard.length > 0 && userRoleForBoard[0].role_name == "ROLE_SUPER_ADMIN") && (userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" || userRole[0].role_name == "ROLE_ADMIN")) && (!tagExists && !tagExistsInCard))
         {
-            let query = "INSERT INTO tag (tag) VALUES('"+tag+"')";
+            let clr = color ? color : "#ccc";
+            let query = "INSERT INTO tag (tag,color) VALUES('"+tag+"','"+clr+"')";
             return self.connection.query(self.connectionObject, query)
                 .then(function (tag) {
                     const query2 = "INSERT INTO card_tag (card_id, tag_id) VALUES(" + cardId + "," + tag.insertId + ")";
-                    return self.connection.query(self.connectionObject, query)
-                    .then(function (tag) {
+                    return self.connection.query(self.connectionObject, query2)
+                    .then(function (tag2) {
                         res.message = "Tag Has been added";
                         res.status = 200;
-                        res.data = data;
+                        res.data = Object.assign(tag,tag2);
                         return res;
                         })
                     .catch((err) => {
@@ -358,7 +386,7 @@ var cardController = (function () {
             res.status = 403;
             return res;
         }
-    }   
+    }
     card.prototype.deleteCards = async function (param)
     {
         var self = this;
@@ -460,53 +488,95 @@ var cardController = (function () {
             var userIsAuthenticated = await this.board.checkUserIsAuthenticated(boardId, userId);
             if (userIsAuthenticated)
             {
-                
-                let query = "SELECT c.id,c.*,c.user_id as creator, u.id as user_id, concat(u.first_name,' ', u.last_name) as full_name, u.email, cu.role_id, r.role as role_name, t.tag, t.id as tagId FROM card c join card_user cu on cu.card_id = c.id "+
-                "join user u on cu.user_id = u.id join role r on r.id = cu.role_id left join card_tag ct on ct.card_id = c.id left join tag t on t.id = ct.tag_id where c.id = " + cardId + " and c.user_id = " + userId + "";
+                let query = "SELECT cli.name as cli_name,cli.id as cli_id,cli.is_checked as cli_isChecked, cli.position as cli_position, c.id,c.*,c.user_id as creator, u.id as user_id, concat(u.first_name,' ', u.last_name) as full_name, u.email, cu.role_id, r.role as role_name, t.tag, t.id as tagId FROM card c join card_user cu on cu.card_id = c.id "+
+                "join user u on cu.user_id = u.id join role r on r.id = cu.role_id left join card_tag ct on ct.card_id = c.id left join tag t on t.id = ct.tag_id LEFT JOIN checklist_item cli on cli.card_id = c.id  where c.id = " + cardId + " and c.user_id = " + userId + "";
                 return this.connection.query(this.connectionObject, query)
-                    .then(function (data) {      
+                    .then(function (data) {    
                     console.log(data);
-                    
-                res.message = "Cards Has been fetched";
-                res.status = 200;                
-                const cardObject = {};
-                let cardUserSet = new Set();
-                let cardTagSet = new Set();
-                data.forEach((e) => {
-                    if (!cardObject.hasOwnProperty(e.id))
-                    {
-                        cardObject[e.id] = {};
-                    }
-                    cardObject[e.id].id = e.id;
-                    cardObject[e.id].name = e.name;
-                    cardObject[e.id].list_id = e.list_id;
-                    cardObject[e.id].reminder_date = e.reminder_date;
-                    cardObject[e.id].description = e.description;
-                    cardObject[e.id].complete = e.is_complete;
+                    res.message = "Cards Has been fetched";
+                    res.status = 200;                
+                    const cardObject = {};
+                    let cardUserSet = new Set();
+                        let cardTagSet = new Set();
+                        let checkListSet = new Set();
+                    data.forEach((e) => {
+                        if (!cardObject.hasOwnProperty(e.id))
+                        {
+                            cardObject[e.id] = {};
+                        }
+                        cardObject[e.id].id = e.id;
+                        cardObject[e.id].name = e.name;
+                        cardObject[e.id].list_id = e.list_id;
+                        cardObject[e.id].reminder_date = e.reminder_date;
+                        cardObject[e.id].description = e.description;
+                        cardObject[e.id].complete = e.is_complete;
 
-                    // ADD USER
-                    cardObject[e.id].users = cardObject[e.id].hasOwnProperty("users") ? cardObject[e.id].users : [];
-                    if (!cardUserSet.has(e.user_id))
-                    {
-                        const creator = e.creator == e.user_id ? true : false;
-                        cardObject[e.id].users.push({ id: e.user_id, name: e.full_name, email: e.email, creator, role_name: e.role_name, role: e.role_id });
-                        cardUserSet.add(e.user_id);
-                    }
-                    // ADD TAG
-                    cardObject[e.id].tags = cardObject[e.id].hasOwnProperty("tags") ? cardObject[e.id].tags : [];
-                    if (!cardTagSet.has(e.tagId))
+                        // ADD USER
+                        cardObject[e.id].users = cardObject[e.id].hasOwnProperty("users") ? cardObject[e.id].users : [];
+                        if (!cardUserSet.has(e.user_id))
                         {
                             const creator = e.creator == e.user_id ? true : false;
-                            cardObject[e.id].tags.push({ tagId: e.tagId, tagName: e.tag});
-                            cardTagSet.add(e.tagId);
+                            cardObject[e.id].users.push({ id: e.user_id, name: e.full_name, email: e.email, creator, role_name: e.role_name, role: e.role_id });
+                            cardUserSet.add(e.user_id);
                         }
-                    
-                })                   
-                res.data = cardObject; 
+                        // ADD TAG
+                        cardObject[e.id].tags = cardObject[e.id].hasOwnProperty("tags") ? cardObject[e.id].tags : [];
+                        if (!cardTagSet.has(e.tagId))
+                        {
+                            if(e.tagId)
+                            {
+                                cardObject[e.id].tags.push({ tagId: e.tagId, tagName: e.tag});
+                                cardTagSet.add(e.tagId);
+                            }
+                        }
+                        // ADD CHECKLIST
+                        cardObject[e.id].checkList = cardObject[e.id].hasOwnProperty("checkList") ? cardObject[e.id].checkList : [];
+                        if (!checkListSet.has(e.cli_id))
+                        {
+                            if (e.cli_id)
+                            {
+                                cardObject[e.id].checkList.push({ cliId: e.cli_id, cliName: e.cli_name, cliPosition: e.cli_position, cliIsChecked: e.cli_isChecked });
+                                checkListSet.add(e.cli_id);
+                            }
+                        }
+                        
+                    })                   
+                    res.data = cardObject; 
+                    return res;
+                    }).catch(function (err) {
+                        res.message = err;
+                        res.status = 406;
+                        return res;
+                    })
+                    } else {
+                        res.message = "User is not authorized";
+                        res.status = 403;
+                        return res;
+                    }
+        } else {
+            res.message = "Board does not exists";
+            res.status = 403;
+            return res;
+        }
+    }
+    card.prototype.getTagByKeyWord = async function (param)
+    {
+        let res = new response();
+        let {userId,boardId,searchKey} = param;
+         var userIsAuthenticated = await this.board.checkUserIsAuthenticated(boardId, userId);
+            if (userIsAuthenticated)
+            {
+                
+                let query = "SELECT * FROM tag WHERE tag LIKE '%"+searchKey+"%'";
+                return this.connection.query(this.connectionObject, query)
+                .then(function (data) {      
+                    console.log(data);
+                    res.message = "Tags Has been fetched";
+                    res.status = 200;                    
+                    res.data = data; 
                 return res;
                 }).catch(function (err) {
                     console.log(err);
-                    
                     res.message = err;
                     res.status = 406;
                     return res;
@@ -516,12 +586,6 @@ var cardController = (function () {
                     res.status = 403;
                     return res;
                 }
-            
-        } else {
-            res.message = "Board does not exists";
-            res.status = 403;
-            return res;
-        }
         
     }
     card.prototype.removeTag = async function (param)
@@ -530,11 +594,10 @@ var cardController = (function () {
         let { boardId,userId ,cardId,tagId} = param;    
         let boardExists = await this.board.checkBoardExists(boardId);
         if (boardExists)
-        {            
+        {
             var userIsAuthenticated = await this.board.checkUserIsAuthenticated(boardId, userId);
             if (userIsAuthenticated)
             {
-                
                 let query = "DELETE t,ct FROM card_tag ct JOIN tag t ON ct.tag_id = t.id WHERE tag_id="+tagId+" AND card_id="+cardId+"";
                 return this.connection.query(this.connectionObject, query)
                 .then(function (data) {                          
@@ -559,6 +622,29 @@ var cardController = (function () {
             return res;
         }
         
+    }
+    card.prototype.addCheckListItem = async function (params)
+    {
+        let self = this;
+        let res = new response();
+        let { authenticateUserId,cardId,boardId,name,isChecked,position } = params;
+        let hasUser = await this.user.checkUserExistsById(authenticateUserId);
+        let userRoleForBoard = await this.board.checkUserRole(boardId, authenticateUserId);
+        let userRole = await this.checkUserRole(cardId, authenticateUserId);
+        if (hasUser && (userRoleForBoard.length > 0 && userRoleForBoard[0].role_name == "ROLE_SUPER_ADMIN") && (userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" || userRole[0].role_name == "ROLE_ADMIN")))
+        {
+            let query = "INSERT INTO `checklist_item` (card_id,name,is_checked,position) VALUES('"+cardId+"','"+name+"','"+isChecked+"', '"+position+"')";
+            return self.connection.query(self.connectionObject, query)
+            .then(function (data) {
+                res.message = "Checklist Has been added";
+                res.status = 200;
+                res.data = Object.assign(data);
+                return res;
+                        })
+            .catch((err) => {
+                console.log(err);
+            })
+        }
     }
     return card;
 })();

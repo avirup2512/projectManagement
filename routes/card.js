@@ -434,6 +434,53 @@ router.put('/editUserRole', async function (req, res) {
         }
     }
 })
+/** PUT Methods */
+    /**
+     * @openapi
+     * '/card/getTag':
+     *  PUT:
+     *     tags:
+     *     - Card Controller
+     *     summary: Add Tags to card
+     *     security:
+     *          bearerAuth: [read]
+     *     requestBody:
+     *      required: true
+     *      content:
+     *        application/json:
+     *           schema:
+     *            type: object
+     *            required:
+     *              - cardId
+     *            properties:
+     *     responses:
+     *      201:
+     *        description: Created
+     *      409:
+     *        description: Conflict
+     *      404:
+     *        description: Not Found
+     *      500:
+     */
+
+router.get('/getTag/:searchKey/:boardId', async function (req, res) {
+    Object.assign(req.params, { userId: req.authenticatedUser.id })
+    if (!req.authenticatedUser) {
+        res.status(400)
+        .send(new error("Send Proper data."));
+        return;
+    } else {
+        try {
+            var response = await card.getTagByKeyWord(req.params);
+            res.status(response.status)
+            .send(response)
+        } catch (err) {
+            console.log(err);
+            res.status(400)
+            .send(new error(err));
+        }
+    }
+})
 /** POST Methods */
     /**
      * @openapi
@@ -475,8 +522,8 @@ router.post('/addTag', async function (req, res) {
             var response = await card.addTag(req.body);
             console.log(response);
             
-            res.status(response[0].status)
-            .send(response[0])
+            res.status(response.status)
+            .send(response)
         } catch (err) {
             console.log(err);
             
@@ -500,6 +547,26 @@ router.delete('/deleteTag', async function (req, res) {
         } catch (err) {
             console.log(err);
             res.status(400)
+            .send(new error(err));
+        }
+    }
+})
+
+router.post('/addCheckList', async function (req, res) {
+    let { cardId,boardId,name,isChecked,position } = req.body;
+    Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id })
+    if (!req.authenticatedUser || !cardId || !boardId || !name || isChecked == undefined || position == undefined) {
+        res.status(400)
+        .send(new error("Send Proper data."));
+        return;
+    } else {
+        try {
+            var response = await card.addCheckListItem(req.body);            
+            res.status(response.status)
+            .send(response)
+        } catch (err) {
+            console.log(err);
+            res.status(344)
             .send(new error(err));
         }
     }
