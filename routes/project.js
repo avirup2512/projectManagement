@@ -4,12 +4,12 @@ const mysql = require('mysql');
 const connection = require("../class/sql/mysqlDbConnection");
 var router = express.Router();
 var error = require('../class/error');
-var boardController = require("../controller/board")
+const projectController = require('../controller/project');
 
 let con = new connection(mysql);
 let connectionObject = con.getConnection();
 con.connect(connectionObject);
-var board = new boardController(con,connectionObject);
+var project = new projectController(con,connectionObject);
 router.use((req, res, next) => {
     if (req.url == "/")
     {
@@ -75,7 +75,7 @@ router.post('/create', async function (req, res) {
         return;
     } else {
         try {
-            var response = await board.createBoard(req.body);
+            var response = await project.createProject(req.body);
             res.status(response[0].status)
                 .send(response[0])
         } catch (err) {
@@ -141,7 +141,7 @@ router.put('/edit', async function (req, res) {
         return;
     } else {
         try {
-            var response = await board.editBoard(req.body);
+            var response = await project.editBoard(req.body);
             console.log(response);
             
             res.status(response[0].status)
@@ -191,7 +191,7 @@ router.delete('/delete', async function (req, res) {
         return;
     } else {
         try {
-            var response = await board.deleteBoard(req.body);
+            var response = await project.deleteBoard(req.body);
             res.status(response.status)
             .send(response)
         } catch (err) {
@@ -228,16 +228,15 @@ router.delete('/delete', async function (req, res) {
      *        description: Not Found
      *      500:
      */
-router.get('/getAllBoard/:projectId', async function (req, res) {
-    const { projectId } = req.params;
-    Object.assign(req.params, { userId: req.authenticatedUser.id })
-    if (!req.authenticatedUser || !projectId) {
+router.get('/getAllProject', async function (req, res) {
+    Object.assign(req.body, { userId: req.authenticatedUser.id })
+    if (!req.authenticatedUser) {
         res.status(400)
             .send(new error("Send Proper data."));
         return;
     } else {
         try {
-            var response = await board.getAllBoard(req.params);
+            var response = await project.getAllProject(req.body);
             console.log(response);
             
             res.status(response.status)
@@ -288,7 +287,7 @@ router.post('/addUser', async function (req, res) {
         return;
     } else {
         try {
-            var response = await board.addUser(req.body);
+            var response = await project.addUser(req.body);
             res.status(response.status)
             .send(response)
         } catch (err) {
@@ -336,7 +335,7 @@ router.put('/editUserRole', async function (req, res) {
         return;
     } else {
         try {
-            var response = await board.updateUserRole(req.body);
+            var response = await project.updateUserRole(req.body);
             res.status(response.status)
             .send(response)
         } catch (err) {
@@ -356,7 +355,7 @@ router.get('/getAllUser/:boardId', async function (req, res) {
         return;
     } else {
         try {
-            var response = await board.getAllUser(req.body);
+            var response = await project.getAllUser(req.body);
             res.status(response.status)
             .send(response)
         } catch (err) {

@@ -248,15 +248,15 @@ router.put('/edit', async function (req, res) {
      *      500:
      */
 router.delete('/delete', async function (req, res) {
-    let { listId, boardId } = req.body;
+    let { listId, boardId, cardId } = req.body;
     Object.assign(req.body, { userId: req.authenticatedUser.id })
-    if (!req.authenticatedUser || !name || !boardId || !listId) {
+    if (!req.authenticatedUser || !cardId || !boardId || !listId) {
         res.status(400)
         .send(new error("Send Proper data."));
         return;
     } else {
         try {
-            var response = await list.deleteList(req.body);
+            var response = await card.deleteCards(req.body);
             res.status(response.status)
             .send(response)
         } catch (err) {
@@ -369,7 +369,7 @@ router.post('/addUsers', async function (req, res) {
         .send(new error("Send Proper data."));
         return;
     } else {
-        users = users.map((e) => ({ user_id: e.user_id, roleId: e.role }));
+        users = users.map((e) => ({ user_id: e.user_id | e.id, roleId: e.role }));
         console.log(users);
         Object.assign(req.body, { users:users })
         try {
@@ -562,6 +562,83 @@ router.post('/addCheckList', async function (req, res) {
     } else {
         try {
             var response = await card.addCheckListItem(req.body);            
+            res.status(response.status)
+            .send(response)
+        } catch (err) {
+            console.log(err);
+            res.status(344)
+            .send(new error(err));
+        }
+    }
+})
+router.put('/editCheckList', async function (req, res) {
+    let { cardId,boardId,name,isChecked,position,id } = req.body;
+    Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id })
+    if (!req.authenticatedUser || !cardId || !boardId || !name || isChecked == undefined || position == undefined || !id) {
+        res.status(400)
+        .send(new error("Send Proper data."));
+        return;
+    } else {
+        try {
+            var response = await card.editCheckListItem(req.body);            
+            res.status(response.status)
+            .send(response)
+        } catch (err) {
+            console.log(err);
+            res.status(344)
+            .send(new error(err));
+        }
+    }
+})
+router.delete('/deleteCheckList', async function (req, res) {
+    let { cardId,boardId,id } = req.body;
+    Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id })
+    if (!req.authenticatedUser || !cardId || !boardId || !id) {
+        res.status(400)
+        .send(new error("Send Proper data."));
+        return;
+    } else {
+        try {
+            var response = await card.deleteCheckListItem(req.body);            
+            res.status(response.status)
+            .send(response)
+        } catch (err) {
+            console.log(err);
+            res.status(344)
+            .send(new error(err));
+        }
+    }
+})
+
+router.post('/createComment', async function (req, res) {
+    let { cardId,boardId,listId,comment } = req.body;
+    Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id, date: new Date() })
+    if (!req.authenticatedUser || !cardId || !boardId || !comment || !listId) {
+        res.status(400)
+        .send(new error("Send Proper data."));
+        return;
+    } else {
+        try {
+            var response = await card.createComments(req.body);            
+            res.status(response.status)
+            .send(response)
+        } catch (err) {
+            console.log(err);
+            res.status(344)
+            .send(new error(err));
+        }
+    }
+})
+router.put('/editComment', async function (req, res) {
+    let { cardId,boardId,listId,id,comment } = req.body;
+    Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id, date: new Date() })
+    if (!req.authenticatedUser || !cardId || !boardId || !comment || !listId || !id) {
+        res.status(400)
+        .send(new error("Send Proper data."));
+        return;
+    } else {
+        try {
+            var response = await card.editComments(req.body);            
             res.status(response.status)
             .send(response)
         } catch (err) {

@@ -15,6 +15,7 @@ const board = require("./routes/board");
 const list = require("./routes/list");
 const card = require("./routes/card");
 const setting = require("./routes/settings");
+const project = require("./routes/project");
 var app = express();
 app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 app.use(express.json());
@@ -79,6 +80,7 @@ app.use('/board', cors(corsOpts), board);
 app.use('/list', cors(corsOpts), list);
 app.use('/card', cors(corsOpts), card);
 app.use("/setting", cors(corsOpts), setting);
+app.use("/project", cors(corsOpts), project);
 app.listen(port, () => {
     console.log("App has been started.");
 })
@@ -289,6 +291,39 @@ async function createTables()
     if(!cardTagTableExists)
     {
         con.createTable(connectionObject, createQuery.createCardTagTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
+    // PROJECT TABLE CREATE
+    var projectTableExists = await con.checkTableExists(connectionObject,dbName,"project");
+    if(!projectTableExists)
+    {
+        con.createTable(connectionObject, createQuery.createProjectTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
+    // PROJECT BOARD TABLE CREATE
+    var projectBoardTableExists = await con.checkTableExists(connectionObject,dbName,"project_board");
+    if(!projectBoardTableExists)
+    {
+        con.createTable(connectionObject, createQuery.createProjectBoardTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
+    // PROJECT USER TABLE CREATE
+    var projectUserTableExists = await con.checkTableExists(connectionObject,dbName,"project_user");
+    if(!projectUserTableExists)
+    {
+        con.createTable(connectionObject, createQuery.createProjectUserTable)
             .then(function (data) {
                 console.log(data);
             }).catch(function (err) {

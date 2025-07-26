@@ -1,8 +1,7 @@
-var createQuery = require("../class/sql/createQuery");
-const error = require("../class/error");
 const response = require("../class/response");
 const boardController = require("./board");
 const userController = require("./user");
+const e = require("express");
 var cardController = (function () {
     let connection;
     let connectionObject;
@@ -391,20 +390,31 @@ var cardController = (function () {
     {
         var self = this;
         let res = new response();
-        let {boardId,listId} = param;
-        let updateUserQuery = "DELETE FROM list " +
-            "WHERE id='" + listId + "'";
+        let { boardId, listId, cardId } = param;
+        let query1 = "DELETE FROM card_user WHERE card_id = '" + cardId + "'";
+        let updateUserQuery = "DELETE FROM card " +
+            "WHERE id='" + cardId + "'";
         let boardExists = await this.board.checkBoardExists(boardId);
         let listExists = await this.checkListExists(listId);
         let userCanEdit = await this.board.checkUserIsAuthenticated(param.boardId, param.userId);
         if (boardExists && listExists && userCanEdit)
         {
-            return this.connection.query(this.connectionObject, updateUserQuery)
-                .then(function (data) {                    
-                    res.message = "List Has been deleted";
-                    res.status = 200;
-                    res.data = data;
-                    return res;
+            return this.connection.query(this.connectionObject, query1)
+                .then(function (data) {
+                    if (boardExists && listExists && userCanEdit)
+                {
+                    return self.connection.query(self.connectionObject, updateUserQuery)
+                        .then(function (data2) {                    
+                            res.message = "Card Has been deleted";
+                            res.status = 200;
+                            res.data = data2;
+                            return res;
+                        });
+                    }else {
+                        res.message = "User is not authorized.";
+                        res.status = 403;
+                        return res;
+                    }
                 });
         }else {
             res.message = "User is not authorized.";
@@ -488,8 +498,8 @@ var cardController = (function () {
             var userIsAuthenticated = await this.board.checkUserIsAuthenticated(boardId, userId);
             if (userIsAuthenticated)
             {
-                let query = "SELECT cli.name as cli_name,cli.id as cli_id,cli.is_checked as cli_isChecked, cli.position as cli_position, c.id,c.*,c.user_id as creator, u.id as user_id, concat(u.first_name,' ', u.last_name) as full_name, u.email, cu.role_id, r.role as role_name, t.tag, t.id as tagId FROM card c join card_user cu on cu.card_id = c.id "+
-                "join user u on cu.user_id = u.id join role r on r.id = cu.role_id left join card_tag ct on ct.card_id = c.id left join tag t on t.id = ct.tag_id LEFT JOIN checklist_item cli on cli.card_id = c.id  where c.id = " + cardId + " and c.user_id = " + userId + "";
+                let query = "SELECT cmnt2.comment, cmnt2.id as commentId, cmnt2.created_date as commentDate, cmnt2.commentUserName as cmntUser2, cmnt2.cmntUserId as cmntUserId, cli.name as cli_name,cli.id as cli_id,cli.is_checked as cli_isChecked, cli.position as cli_position, c.id,c.*,c.user_id as creator, u.id as user_id, concat(u.first_name,' ', u.last_name) as full_name, u.email, cu.role_id, r.role as role_name, t.tag, t.id as tagId FROM card c join card_user cu on cu.card_id = c.id "+
+                "join user u on cu.user_id = u.id join role r on r.id = cu.role_id left join card_tag ct on ct.card_id = c.id left join tag t on t.id = ct.tag_id LEFT JOIN checklist_item cli on cli.card_id = c.id LEFT JOIN (SELECT cmnt.*, concat(cmntUser.first_name, ' ',cmntUser.last_name) as commentUserName, cmntUser.email, cmntUser.id as cmntUserId FROM comment cmnt JOIN user cmntUser on cmntUser.id = cmnt.user_id WHERE cmnt.card_id= " + cardId + ") as cmnt2 on cmnt2.card_id = c.id  where c.id = " + cardId + " and c.user_id = " + userId + "";
                 return this.connection.query(this.connectionObject, query)
                     .then(function (data) {    
                     console.log(data);
@@ -499,6 +509,7 @@ var cardController = (function () {
                     let cardUserSet = new Set();
                         let cardTagSet = new Set();
                         let checkListSet = new Set();
+                        let commentSet = new Set();
                     data.forEach((e) => {
                         if (!cardObject.hasOwnProperty(e.id))
                         {
@@ -539,11 +550,23 @@ var cardController = (function () {
                                 checkListSet.add(e.cli_id);
                             }
                         }
+                        // ADD COMMENT
+                        cardObject[e.id].comments = cardObject[e.id].hasOwnProperty("comments") ? cardObject[e.id].comments : [];
+                        if (!commentSet.has(e.commentId))
+                        {
+                            if (e.commentId)
+                            {
+                                cardObject[e.id].comments.push({ id: e.commentId, user: e.cmntUser2, date: e.commentDate, comment:e.comment, userId:e.cmntUserId});
+                                commentSet.add(e.commentId);
+                            }
+                        }
                         
                     })                   
                     res.data = cardObject; 
                     return res;
                     }).catch(function (err) {
+                        console.log(err);
+                        
                         res.message = err;
                         res.status = 406;
                         return res;
@@ -644,6 +667,120 @@ var cardController = (function () {
             .catch((err) => {
                 console.log(err);
             })
+        }
+    }
+    card.prototype.editCheckListItem = async function (params)
+    {
+        let self = this;
+        let res = new response();
+        let { authenticateUserId,cardId,boardId,id,name,isChecked,position } = params;
+        let hasUser = await this.user.checkUserExistsById(authenticateUserId);
+        let userRoleForBoard = await this.board.checkUserRole(boardId, authenticateUserId);
+        let userRole = await this.checkUserRole(cardId, authenticateUserId);
+        if (hasUser && (userRoleForBoard.length > 0 && userRoleForBoard[0].role_name == "ROLE_SUPER_ADMIN") && (userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" || userRole[0].role_name == "ROLE_ADMIN")))
+        {
+            let query = "UPDATE `checklist_item` set name='"+name+"', is_checked='"+isChecked+"', position='"+position+"' where id='"+id+"'";
+            return self.connection.query(self.connectionObject, query)
+            .then(function (data) {
+                res.message = "Checklist Has been updated";
+                res.status = 200;
+                res.data = Object.assign(data);
+                return res;
+                        })
+            .catch((err) => {
+                console.log(err);
+            })
+        }
+    }
+    card.prototype.deleteCheckListItem = async function (params)
+    {
+        let self = this;
+        let res = new response();
+        let { authenticateUserId,cardId,boardId,id } = params;
+        let hasUser = await this.user.checkUserExistsById(authenticateUserId);
+        let userRoleForBoard = await this.board.checkUserRole(boardId, authenticateUserId);
+        let userRole = await this.checkUserRole(cardId, authenticateUserId);
+        if (hasUser && (userRoleForBoard.length > 0 && userRoleForBoard[0].role_name == "ROLE_SUPER_ADMIN") && (userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" || userRole[0].role_name == "ROLE_ADMIN")))
+        {
+            let query = "DELETE FROM `checklist_item` where id='"+id+"'";
+            return self.connection.query(self.connectionObject, query)
+            .then(function (data) {
+                res.message = "Checklist Has been deleted";
+                res.status = 200;
+                res.data = Object.assign(data);
+                return res;
+                        })
+            .catch((err) => {
+                console.log(err);
+            })
+        }
+    }
+    card.prototype.createComments = async function (params)
+    {
+        let res = new response();
+        let { authenticateUserId,listId,boardId , cardId,comment,date} = params;
+        var checkBoardExists = await this.board.checkBoardExists(boardId);
+        var checkListExists = await this.checkListExists(listId);        
+        if (checkBoardExists && checkListExists) {
+            var userIsAuthenticated = await this.board.checkUserIsAuthenticated(boardId, authenticateUserId);
+            var userRole = await this.checkUserRole(cardId, authenticateUserId);
+            if (userIsAuthenticated && userRole.length > 0) {
+                let query = "INSERT INTO comment (card_id,user_id,comment,created_date) VALUES ('" + cardId + "', '" + authenticateUserId + "','" + comment + "', '" + toMySQLDateTime(date) + "')";
+                return this.connection.query(this.connectionObject, query)
+                .then(function (data) {                                    
+                res.message = "Comment Has been added";
+                res.status = 200;
+                    res.data = data;
+                    return res;
+                }).catch(function (err) {
+                    console.log("err");
+                    res.message = err;
+                    res.status = 406;
+                    return res;
+                })
+            }else {
+                res.message = "User is not authorized.";
+                res.status = 403;
+                return res;
+            }
+        }else {
+            res.message = "Board does not exists.";
+            res.status = 403;
+            return res;
+        }
+    }
+    card.prototype.editComments = async function (params)
+    {
+        let res = new response();
+        let { authenticateUserId,listId,boardId , cardId,comment,id} = params;
+        var checkBoardExists = await this.board.checkBoardExists(boardId);
+        var checkListExists = await this.checkListExists(listId);        
+        if (checkBoardExists && checkListExists) {
+            var userIsAuthenticated = await this.board.checkUserIsAuthenticated(boardId, authenticateUserId);
+            var userRole = await this.checkUserRole(cardId, authenticateUserId);
+            if (userIsAuthenticated && userRole.length > 0) {
+                let query = "UPDATE comment SET comment = '"+ comment + "' WHERE id='"+id+"'";
+                return this.connection.query(this.connectionObject, query)
+                .then(function (data) {                                    
+                res.message = "Comment Has been edited";
+                res.status = 200;
+                    res.data = data;
+                    return res;
+                }).catch(function (err) {
+                    console.log("err");
+                    res.message = err;
+                    res.status = 406;
+                    return res;
+                })
+            }else {
+                res.message = "User is not authorized.";
+                res.status = 403;
+                return res;
+            }
+        }else {
+            res.message = "Board does not exists.";
+            res.status = 403;
+            return res;
         }
     }
     return card;

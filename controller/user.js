@@ -78,6 +78,7 @@ var userController = (function () {
         return result
     }
     user.prototype.getUserByEmail = function (userEmail) {
+        let self = this;
         let result = new response("", 404, {});
         return this.connection.query(this.connectionObject, "SELECT * FROM user WHERE email='" + userEmail + "'")
             .then(function (data) {
@@ -88,9 +89,18 @@ var userController = (function () {
                 }
                 else {
                     result.message = true;
-                    result.data = data[0];
                     result.status = 200;
-                    return result;
+                    return self.connection.query(self.connectionObject, "SELECT p.name as projectName, p.description as projectDescription, p.id as projectId, p.created_date as projectCreatedAt FROM project p JOIN project_user pu ON pu.project_id = p.id  WHERE pu.user_id='" + data[0].id + "' AND pu.is_default=1")
+                    .then(function (project) {
+                        result.message = true;
+                        result.data = Object.assign(project[0], data[0]);
+                        result.status = 200;
+                        return result;
+                    }).catch(function (err) {
+                        result.message = false;
+                        result.data = err;
+                        return result;
+                    })
                 }
             }).catch(function (err) {
                 result.message = false;
@@ -245,8 +255,16 @@ var userController = (function () {
                 res.message = "User Has been created";
                 res.status = 200;
                 res.data = data;
-                return self.connection.query(self.connectionObject, "INSERT INTO user_role(roleId,userId) VALUES(" + existsRole.role.id + "," + data.insertId + ")")
-                    .then(function (data) {
+                return self.connection.query(self.connectionObject, "INSERT INTO project(name,description,user_id,is_public) VALUES('Default Project','DEfault Project'," + data.insertId + ", 0)")
+                    .then(function (project) {
+                        return self.connection.query(self.connectionObject, "INSERT INTO project_user(user_id,project_id,role_id,is_default) VALUES(" + data.insertId + "," + project.insertId + ",3,1)")
+                        .then(function (data) {
+                            return res;
+                        }).catch(function (err) {
+                            res.message = err;
+                            res.status = 400;
+                            return res;
+                        })
                         return res;
                     }).catch(function (err) {
                     res.message = err;
@@ -313,6 +331,31 @@ var userController = (function () {
         }).catch(function (err) {
             return false;
     })
+    }
+    user.prototype.userHasDefaultProject = function (params)
+    {
+        let { userId } = params;
+        console.log(userId);
+        
+        let result = new response("", 404, {});
+        return this.connection.query(this.connectionObject, "SELECT pu.*, p.name as projectName, p.description as projectDescription, p.created_date as projectCreatedDate, p.user_id as projectCreatedBy FROM project_user pu JOIN project p ON p.id=pu.project_id WHERE pu.user_id ='" + userId + "' AND pu.is_default=1")
+            .then(function (data) {
+                if (data.length == 0) {
+                    result.message = false;
+                    result.status = 404
+                    return result;
+                }
+                else {
+                    result.message = true;
+                    result.data = data;
+                    result.status = 200;
+                    return result;
+                }
+            }).catch(function (err) {
+                result.message = false;
+                result.data = err;
+                return result;
+            })
     }
     return user;
 })();

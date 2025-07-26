@@ -2,29 +2,31 @@ var createQuery = require("../class/sql/createQuery");
 const error = require("../class/error");
 const response = require("../class/response");
 const userController = require("./user");
-var boardController = (function () {
-    let connection;
-    let connectionObject;
-    let user;
-    function board(connection,connectionObject) {
+var projectController = (function () {
+    function project(connection,connectionObject) {
         this.connection = connection;
         this.connectionObject = connectionObject;
         this.user = new userController(this.connection,this.connectionObject)
     }
-    const addBoardUser = function (idx, users,boardId,self)
+    function toMySQLDateTime(isoString) {
+        if (!isoString || isoString === 'null' || isoString === undefined) return null;
+        const date = new Date(isoString);
+        return date.toISOString().slice(0, 19).replace('T', ' ');
+    }
+    const addProjectUser = function (idx, users,projectId,self)
     {
         let res = new response();
         if(idx > users.length-1)
         {
             return [];
         }
-        let insertBoardUserQuery = "INSERT INTO board_user (user_id,board_id,role_id)" +
-            "VALUES('" +  users[idx].user_id + "','" + boardId + "','"+ users[idx].role +"') ON DUPLICATE KEY UPDATE role_id = VALUES(role_id)";
+        let query = "INSERT INTO project_user (user_id,project_id,role_id)" +
+            "VALUES('" +  users[idx].user_id + "','" + projectId + "','"+ users[idx].role +"') ON DUPLICATE KEY UPDATE role_id = VALUES(role_id)";
         let pr = new Promise((resolve, reject) => {
-                self.connection.query(self.connectionObject, insertBoardUserQuery)
+                self.connection.query(self.connectionObject, query)
                 .then(function (data3) {  
-                data3.boardId = boardId;      
-                res.message = "Board Has been created";
+                data3.projectId = projectId;      
+                res.message = "Project Has been created";
                 res.status = 200;
                 res.data = data3;
                 resolve(res);
@@ -35,7 +37,7 @@ var boardController = (function () {
                 reject(res);
             })
         })
-        let pr2 = addBoardUser(idx+1, users,boardId,self)
+        let pr2 = addProjectUser(idx+1, users,projectId,self)
         return Promise.all([pr, pr2]).then(([value, rest]) => { 
             let arr = [value, ...rest];
             let response = arr.reduce((e,j) => {
@@ -76,7 +78,7 @@ var boardController = (function () {
             return [response];
         });
     } 
-    board.prototype.checkUserIsAuthenticated = async function (boardId, userId) {
+    project.prototype.checkUserIsAuthenticated = async function (boardId, userId) {
         let query = "SELECT (SELECT user_id FROM board WHERE id='" + boardId + "' && user_id='" + userId + "') as board" +
                     "(SELECT user_id FROM board_user WHERE board_id='" + boardId + "' && user_id='" + userId + "') as board_user" 
         return this.connection.query(this.connectionObject,query)
@@ -89,7 +91,7 @@ var boardController = (function () {
                 return true;
         })
     }
-    board.prototype.checkUserRole = async function (boardId, userId) {
+    project.prototype.checkUserRole = async function (boardId, userId) {
         let query = "SELECT DISTINCT r.role AS role_name " +
             "FROM board_user bu " +
             "JOIN role r ON bu.role_id = r.id " +
@@ -104,7 +106,7 @@ var boardController = (function () {
                 return [];
         })
     }
-    board.prototype.checkBoardExists = async function (boardId) {
+    project.prototype.checkBoardExists = async function (boardId) {
         return this.connection.query(this.connectionObject,"SELECT * FROM board WHERE id='" + boardId + "'")
             .then(function (data) {
                 if (data.length == 0)
@@ -115,7 +117,7 @@ var boardController = (function () {
                 return true;
         })
     }
-    board.prototype.checkRole = function (role) {
+    project.prototype.checkRole = function (role) {
         let response = {};
         return this.connection.query(this.connectionObject,"SELECT * FROM role WHERE role='" + role + "'")
             .then(function (data) {
@@ -136,26 +138,23 @@ var boardController = (function () {
                 return response;
         })
     }
-    board.prototype.createBoard = async function (param)
+    project.prototype.createProject = async function (param)
     {        
         let self = this;
         let res = new response();
-        let { userId,projectId, name, isPublic, users } = param;  
+        let { userId, name, description, isPublic, users } = param;  
         if (!users)
         {
             users = [];
         }
         if (isPublic === undefined)
             isPublic = 0;
-        let insertBoardQuery = "INSERT INTO board (user_id,name,is_public)" +
-            "VALUES('" + userId + "','" + name + "','" + isPublic + "')";
-        return this.connection.query(this.connectionObject, insertBoardQuery)
+        let query1 = "INSERT INTO project (user_id,name,description,is_public,created_date)" +
+            "VALUES('" + userId + "','" + name + "','" + description + "','" + isPublic + "','" + toMySQLDateTime(new Date()) + "')";
+        return this.connection.query(this.connectionObject, query1)
             .then(function (data) {
-            let query1 = "INSERT INTO project_board (project_id,board_id) VALUES('"+projectId+"','"+data.insertId+"')"
-            return self.connection.query(self.connectionObject, query1)
-            .then(function (data2) {
-                let query = "SELECT * FROM role";
-                return self.connection.query(self.connectionObject, query)
+            let query2 = "SELECT * FROM role";
+            return self.connection.query(self.connectionObject, query2)
                 .then(function (data2) {
                 let roleId = null;
                     data2.forEach(function (e) {
@@ -163,14 +162,7 @@ var boardController = (function () {
                         roleId = e.id;
                     })
                     users.push({ user_id: userId, role: roleId });
-                    return addBoardUser(0, users, data.insertId, self);
-                }).catch(function (err) {
-                console.log(err);
-                
-                res.message = err;
-                res.status = 406;
-                return res;
-            })
+                    return addProjectUser(0, users, data.insertId, self);
                 }).catch(function (err) {
                 console.log(err);
                 
@@ -186,7 +178,7 @@ var boardController = (function () {
             return res;
         })
     }
-    board.prototype.editBoard = async function (param)
+    project.prototype.editBoard = async function (param)
     {
         let self = this;
         let res = new response();
@@ -257,7 +249,7 @@ var boardController = (function () {
             return [res];
         }
     }
-    board.prototype.deleteBoard = async function (param)
+    project.prototype.deleteBoard = async function (param)
     {
         var self = this;
         let res = new response();
@@ -281,48 +273,47 @@ var boardController = (function () {
             return res;
         }
     }
-    board.prototype.getAllBoard = async function (param)
+    project.prototype.getAllProject = async function (param)
     {
         console.log("USER_ID");
         let res = new response();
-        let { userId, projectId } = param;        
+        let { userId } = param;        
         console.log(userId);
-        let query = "SELECT  b.id AS board_id, b.user_id, b.name AS board_name, bu.user_id AS board_user_id, u.first_name, u.last_name, r.role, r.id as role_id FROM  board b JOIN  board_user bu ON b.id = bu.board_id JOIN user u on u.id = bu.user_id  JOIN  role r ON bu.role_id = r.id JOIN project_board pb ON pb.board_id = b.id"+
-        " WHERE b.id IN (SELECT board_id FROM board_user WHERE user_id = "+userId+") AND pb.project_id ="+projectId+" "+
-        "ORDER BY b.id";       
+        let query = "SELECT  p.id AS project_id, p.user_id, p.name AS project_name, pu.user_id AS project_user_id, u.first_name, u.last_name, r.role, r.id as role_id FROM  project p JOIN  project_user pu ON p.id = pu.project_id JOIN user u on u.id = pu.user_id  JOIN  role r ON pu.role_id = r.id "+
+        "WHERE p.id IN (SELECT project_id FROM project_user WHERE user_id = "+userId+") "+
+        "ORDER BY p.id";       
         return this.connection.query(this.connectionObject, query)
             .then(function (data) {
-                let boardResponse = {};
+                let projectResponse = {};
                 data.forEach((e) => {
-                if (!boardResponse.hasOwnProperty(e.board_id))
+                if (!projectResponse.hasOwnProperty(e.project_id))
                 {
-                    boardResponse[e.board_id] = {};
+                    projectResponse[e.project_id] = {};
                 }
-                    boardResponse[e.board_id].name = e.board_name;
-                    boardResponse[e.board_id].id = e.board_id;
-                    boardResponse[e.board_id].board_user_id = e.user_id;
-                    const creator = e.user_id == e.board_user_id ? true : false;
-                if (boardResponse[e.board_id].user && boardResponse[e.board_id].user.length > 0)
+                    projectResponse[e.project_id].name = e.project_name;
+                    projectResponse[e.project_id].id = e.project_id;
+                    projectResponse[e.project_id].project_user_id = e.user_id;
+                    const creator = e.user_id == e.project_user_id ? true : false;
+                if (projectResponse[e.project_id].user && projectResponse[e.project_id].user.length > 0)
                 {
-                    boardResponse[e.board_id].user.push({ id: e.board_user_id, role: e.role, role_id:e.role_id, first_name: e.first_name, last_name: e.last_name, email: e.email, creator });
+                    projectResponse[e.project_id].user.push({ id: e.project_user_id, role: e.role, role_id:e.role_id, first_name: e.first_name, last_name: e.last_name, email: e.email, creator });
                 } else {
-                    boardResponse[e.board_id].user = [];
-                    boardResponse[e.board_id].user.push({id:e.board_user_id,role:e.role, role_id:e.role_id, first_name:e.first_name, last_name:e.last_name,email:e.email, creator})
+                    projectResponse[e.project_id].user = [];
+                    projectResponse[e.project_id].user.push({id:e.project_user_id,role:e.role, role_id:e.role_id, first_name:e.first_name, last_name:e.last_name,email:e.email, creator})
                 }
             })
-            res.message = "Board Has been fetched";
+            res.message = "Project Has been fetched";
             res.status = 200;
-                res.data = boardResponse;
+                res.data = projectResponse;
                 return res;
             }).catch(function (err) {
                 console.log("err");
-                
                 res.message = err;
                 res.status = 406;
                 return res;
             })
     }
-    board.prototype.addUser = async function (param)
+    project.prototype.addUser = async function (param)
     {
         let res = new response();
         let { authenticateUserId,userId, boardId, roleId } = param;
@@ -350,7 +341,7 @@ var boardController = (function () {
             return res;
         }
     }
-    board.prototype.updateUserRole = async function (param)
+    project.prototype.updateUserRole = async function (param)
     {
         let res = new response();
         let { authenticateUserId,userId, boardId, roleId } = param;
@@ -377,7 +368,7 @@ var boardController = (function () {
             return res;
         }
     }
-    board.prototype.getAllUser = async function (param)
+    project.prototype.getAllUser = async function (param)
     {
         let result = new response("", 404, {});
         return this.connection.query(this.connectionObject, "SELECT u.* FROM user u join board_user bu on bu.user_id = u.id  WHERE bu.board_id="+boardId+"")
@@ -399,6 +390,6 @@ var boardController = (function () {
                 return result;
             })
     }
-    return board;
+    return project;
 })();
-module.exports = boardController;
+module.exports = projectController;

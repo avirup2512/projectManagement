@@ -194,6 +194,8 @@ router.post('/createUser', async function (req, res) {
         } else {
             try {
                 var result = await user.createUserFromSocialAuth(req.body);
+                console.log(result);
+                
                 token = jwt.sign(
                 {
                     userEmail: email,
@@ -206,7 +208,8 @@ router.post('/createUser', async function (req, res) {
             .json({
                 success:result.status == 200 ?  true : false,
                 token: token,
-                status:result.status
+                status: result.status,
+                message:result.message
             })
             } catch (err) {
                 console.log(err);

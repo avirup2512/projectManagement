@@ -39,9 +39,9 @@ var createQuery = {
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
         "tag varchar(255),color varchar(255))",
     createCardsTable: "CREATE TABLE card" +
-        "(id int PRIMARY KEY AUTO_INCREMENT, user_id int "+
+        "(id int PRIMARY KEY AUTO_INCREMENT, user_id int, "+
         "list_id int, name varchar(255),description varchar(255), create_date DATETIME DEFAULT CURRENT_TIMESTAMP," +
-        "is_active BOOLEAN DEFAULT true, is_complete BOOLEAN DEFAULT false, due_date DATETIME, reminder_date DATETIME," +
+        "is_active BOOLEAN DEFAULT true, is_complete BOOLEAN DEFAULT false, due_date DATETIME, reminder_date DATETIME, progress int," +
         "FOREIGN KEY (list_id) REFERENCES list(id))",
     createCardUserTable: "CREATE TABLE card_user" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
@@ -67,7 +67,7 @@ var createQuery = {
         "FOREIGN KEY (card_id) REFERENCES card(id))",
     createCommentTable: "CREATE TABLE comment" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
-        "card_id int,user_id int, comment varchar(255), created_date DATETIME DEFAULT CURRENT_TIMESTAMP," +
+        "card_id int,user_id int, comment LONGTEXT, created_date DATETIME DEFAULT CURRENT_TIMESTAMP," +
         "FOREIGN KEY (card_id) REFERENCES card(id)," +
         "FOREIGN KEY (user_id) REFERENCES user(id))",
     createCardActivityTable: "CREATE TABLE card_activity" +
@@ -75,5 +75,20 @@ var createQuery = {
         "card_id int,user_id int, activity varchar(255), created_date DATETIME DEFAULT CURRENT_TIMESTAMP," +
         "FOREIGN KEY (card_id) REFERENCES card(id)," +
         "FOREIGN KEY (user_id) REFERENCES user(id))",
+    createProjectTable: "CREATE TABLE project" +
+        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "name VARCHAR(255),description LONGTEXT, user_id int, is_public int DEFAULT 1, created_date DATETIME DEFAULT CURRENT_TIMESTAMP)",
+    createProjectBoardTable: "CREATE TABLE project_board" +
+        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "project_id int, board_id int," +
+        "FOREIGN KEY (project_id) REFERENCES project(id)," +
+        "FOREIGN KEY (board_id) REFERENCES board(id))",
+    createProjectUserTable: "CREATE TABLE project_user" +
+        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "user_id int, project_id int, role_id int, is_default int," +
+        "FOREIGN KEY (user_id) REFERENCES user(id)," +
+        "FOREIGN KEY (role_id) REFERENCES role(id)," +
+        "FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE," +
+        "UNIQUE (user_id, project_id))",
 }
 module.exports = createQuery;
