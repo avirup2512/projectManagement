@@ -67,9 +67,9 @@ router.use((req, res, next) => {
      *        description: Server Error
      */
 router.post('/create', async function (req, res) {
-    let { name, boardId,listId,description,isActive,dueDate,reminderDate } = req.body;
+    let { name, boardId,listId,position,description,isActive,dueDate,reminderDate } = req.body;
     Object.assign(req.body, { userId: req.authenticatedUser.id })
-    if (!req.authenticatedUser || !name || !boardId || !listId) {
+    if (!req.authenticatedUser || !name || !boardId || !listId || position == undefined) {
         res.status(400)
             .send(new error("Send Proper data."));
         return;
@@ -647,5 +647,48 @@ router.put('/editComment', async function (req, res) {
             .send(new error(err));
         }
     }
+})
+router.put('/updatePosition', async function (req, res) {
+        let { boardId,cards } = req.body;
+        Object.assign(req.body, { userId: req.authenticatedUser.id })
+        if (!req.authenticatedUser || !boardId || !cards ) {
+            res.status(400)
+            .send(new error("Send Proper data."));
+            return;
+        } else {
+            try {
+                var response = await card.updatePosition(req.body);
+                console.log(response);
+                
+                res.status(response[0].status)
+                .send(response[0])
+            } catch (err) {
+                console.log(err);
+                
+                res.status(400)
+                .send(new error(err));
+            }
+        }
+})
+router.post('/copyCard', async function (req, res) {
+        let { boardId,listId,cardId, listIds } = req.body;
+        Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id })
+        if (!req.authenticatedUser || !boardId || !cardId || !listId || !listIds ) {
+            res.status(400)
+            .send(new error("Send Proper data."));
+            return;
+        } else {
+            try {
+                var response = await card.copyCard(req.body);
+                console.log(response[0]);
+                
+                res.status(response[0].status)
+                .send(response[0])
+            } catch (err) {
+                console.log(err);
+                res.status(400)
+                .send(new error(err));
+            }
+        }
 })
 module.exports = router;

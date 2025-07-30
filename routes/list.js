@@ -307,6 +307,8 @@ router.get('/getAllList/:boardId', async function (req, res) {
     } else {
         try {
             var response = await list.getAllList(req.params);
+            console.log(response);
+            
             res.status(response.status)
             .send(response)
         } catch (err) {
@@ -315,5 +317,74 @@ router.get('/getAllList/:boardId', async function (req, res) {
             .send(new error(err));
         }
     }
+})
+router.put('/updateCardList', async function (req, res) {
+    let { boardId, cardId, addedListId, deletedListId,position } = req.body;
+    Object.assign(req.body, { authenticatedUser: req.authenticatedUser.id })
+    console.log(req.authenticatedUser);
+    
+        if (!req.authenticatedUser || !boardId || !cardId || !addedListId || !deletedListId || position == undefined ) {
+            res.status(400)
+            .send(new error("Send Proper data."));
+            return;
+        } else {
+            try {
+                var response = await list.addDeleteCardAmongDiffList(req.body);
+                console.log(response);
+                res.status(response.status)
+                .send(response)
+            } catch (err) {
+                console.log(err);
+                
+                res.status(400)
+                .send(new error(err));
+            }
+        }
+})
+router.put('/updateCardSameList', async function (req, res) {
+    let { boardId, cards } = req.body;
+    Object.assign(req.body, { authenticatedUser: req.authenticatedUser.id })
+    console.log(req.authenticatedUser);
+    
+        if (!req.authenticatedUser || !boardId || !cards ) {
+            res.status(400)
+            .send(new error("Send Proper data."));
+            return;
+        } else {
+            try {
+                var response = await list.addDeleteCardAmongSameList(req.body);
+                console.log(response);
+                res.status(response.status)
+                .send(response)
+            } catch (err) {
+                console.log(err);
+                
+                res.status(400)
+                .send(new error(err));
+            }
+        }
+})
+router.put('/updateCardPosition', async function (req, res) {
+        let { boardId, cardsPositionToBePlus, cardsPositionToBeMinus, listId } = req.body;
+    Object.assign(req.body, { authenticatedUser: req.authenticatedUser.id })
+    console.log(req.authenticatedUser);
+    
+        if (!req.authenticatedUser || !boardId || !cardsPositionToBePlus || !cardsPositionToBeMinus || !listId ) {
+            res.status(400)
+            .send(new error("Send Proper data."));
+            return;
+        } else {
+            try {
+                var response = await list.updateCardPositionInList(req.body);
+                console.log(response);
+                res.status(response[0].status)
+                .send(response[0])
+            } catch (err) {
+                console.log(err);
+                
+                res.status(400)
+                .send(new error(err));
+            }
+        }
 })
 module.exports = router;

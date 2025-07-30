@@ -93,7 +93,7 @@ var boardController = (function () {
         let query = "SELECT DISTINCT r.role AS role_name " +
             "FROM board_user bu " +
             "JOIN role r ON bu.role_id = r.id " +
-            "WHERE bu.user_id = '" + userId + "' AND bu.board_id = " + boardId + "";
+            "WHERE bu.user_id = '" + userId + "' AND bu.board_id = " + boardId + "";        
         return this.connection.query(this.connectionObject, query)
             .then(function (data) {
                 if (data.length == 0)

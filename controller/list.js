@@ -11,6 +11,48 @@ var listController = (function () {
         this.connectionObject = connectionObject;
         this.board = new boardController(this.connection,this.connectionObject)
     }
+    const updateCardPositionInList = function (idx, cards,type, self)
+    {
+        console.log(cards);
+        console.log(idx);
+        console.log(cards[idx]);
+        if (cards.length == 0)
+        {
+            return [];
+        }
+        let res = new response();
+        if (idx > cards.length - 1)
+        {
+            return [];
+        }
+        let query = type == "plus" ? "UPDATE card SET position=position+1 WHERE id=" + cards[idx] + "" : "UPDATE card SET position=position-1 WHERE id=" + cards[idx] + "";
+        const pr1 = new Promise((resolve, reject) => {
+            try {
+                self.connection.query(self.connectionObject, query).
+                    then((data) => {
+                    console.log(data);
+                    
+                    res.message = "Position has been updated";
+                    res.status = 200;
+                    res.data = data;
+                    resolve(res);
+            })
+            } catch (error) {
+                console.log(err);
+                res.message = err;
+                res.status = 400;
+                reject(res);
+            }
+        })
+        const pr2 = updateCardPositionInList(idx + 1, cards,type, self);
+        return Promise.all([pr1, pr2]).then(([value, rest]) => {
+            let arr = [value, ...rest];
+            let response = arr.reduce((e,j) => {
+                return Object.assign(e,j)
+            })
+            return [response];
+        })
+    }
     const updatePosition = async function (idx,lists,self)
     {
         let res = new response();
@@ -191,8 +233,8 @@ var listController = (function () {
         let boardExists = await this.board.checkBoardExists(boardId);
         if (boardExists)
         {
-            let query = "SELECT result.*,u.first_name,u.last_name,u.email, cu.id as card_user_id, cu.user_id as card_user_user_id, cu.role_id as card_user_role_id, r.role as role_name, t.tag, t.id as tagId FROM (SELECT l.*, c.id as card_id, c.name as card_name, c.list_id as card_list_id, c.description as card_description,c.is_complete as card_complete, c.reminder_date as card_reminder_date, c.due_date as card_due_date, c.create_date as card_create_date, c.user_id as card_creator "+
-            "FROM list l LEFT JOIN card c on c.list_id = l.id WHERE board_id = " + boardId + ") AS result LEFT JOIN card_user cu ON cu.card_id = result.card_id left join user u on cu.user_id = u.id left join role r on cu.role_id = r.id left join card_tag ct on  ct.card_id = result.card_id left join tag t on t.id = ct.tag_id  order by result.card_id"; // WHERE cu.user_id = " + userId + "
+            let query = "SELECT result.*,u.first_name,u.last_name,u.email, cu.id as card_user_id, cu.user_id as card_user_user_id, cu.role_id as card_user_role_id, r.role as role_name, t.tag, t.id as tagId FROM (SELECT l.*, c.id as card_id, c.name as card_name, c.list_id as card_list_id, c.description as card_description,c.is_complete as card_complete, c.reminder_date as card_reminder_date, c.due_date as card_due_date, c.create_date as card_create_date, c.user_id as card_creator, c.position as card_position "+
+            "FROM list l LEFT JOIN card c on c.list_id = l.id WHERE board_id = " + boardId + ") AS result LEFT JOIN card_user cu ON cu.card_id = result.card_id left join user u on cu.user_id = u.id left join role r on cu.role_id = r.id left join card_tag ct on  ct.card_id = result.card_id left join tag t on t.id = ct.tag_id  order by result.card_id, result.position DESC"; // WHERE cu.user_id = " + userId + "
             return this.connection.query(this.connectionObject, query)
                 .then(function (data) {    
                     console.log(data);
@@ -246,7 +288,7 @@ var listController = (function () {
                                     cardTag.push({tagId:e.tagId, tagName:e.tag})
                                     const creator = e.card_creator == e.card_user_user_id ? true : false
                                     cardUser.push({ user_id: e.card_user_user_id,role:e.card_user_role_id,role_name:e.role_name, name: e.first_name + " " + e.last_name, email: e.email,creator })
-                                    listObject[e.id].cards.push({ id: e.card_id, name: e.card_name, description: e.card_description, complete: e.card_complete, users: cardUser, tags: cardTag });
+                                    listObject[e.id].cards.push({ id: e.card_id, name: e.card_name, description: e.card_description, complete: e.card_complete, position:e.card_position, users: cardUser, tags: cardTag });
                                     // Add Card SET
                                     cardMap.set(e.card_id, listObject[e.id].cards.length - 1);
                                     cardUserSet.add(e.card_id + e.card_user_user_id);
@@ -254,6 +296,9 @@ var listController = (function () {
                                 }
                                 
                             }
+                            listObject[e.id].cards.sort((a, b) => {
+                                return a.position > b.position ? 1 : -1
+                            });
                         })
                     }
                     res.message = "List Has been fetched";
@@ -273,6 +318,118 @@ var listController = (function () {
             return res;
         }
         
+    }
+    list.prototype.addDeleteCardAmongDiffList = async function (param) {
+        let res = new response();
+        const { authenticatedUser, boardId, cardId, addedListId, deletedListId, position } = param;        
+        var checkBoardExists = await this.board.checkBoardExists(boardId);
+        if(checkBoardExists)
+        {
+            var userIsAuthenticated = await this.board.checkUserIsAuthenticated(boardId, authenticatedUser);
+            var userRole = await this.board.checkUserRole(boardId, authenticatedUser);
+            console.log(userIsAuthenticated);
+            console.log(userRole);
+            
+            if (userIsAuthenticated && userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" | userRole[0].role_name == "ROLE_ADMIN")) {
+                let query1 = "UPDATE card SET list_id=" + addedListId + ", position="+position+" WHERE list_id=" + deletedListId + " AND id="+cardId+"";
+                return this.connection.query(this.connectionObject, query1).
+                then((data) => {
+                    res.message = "Card has been updated";
+                    res.status = 200;
+                    res.data = data;
+                    return res;
+                }).catch(function (err) {
+                    console.log(err);
+                    res.message = err;
+                    res.status = 406;
+                    return res;
+                })
+            } else {
+                res.message = "User not authorized";
+                res.status = 403;
+                return [res];
+            }
+        }else {
+            res.message = "Board does not exists.";
+            res.status = 403;
+            return [res];
+        }
+    }
+    list.prototype.addDeleteCardAmongSameList = async function (param) {
+        let res = new response();
+        const { authenticatedUser, boardId, cards } = param;        
+        var checkBoardExists = await this.board.checkBoardExists(boardId);
+        if(checkBoardExists)
+        {
+            var userIsAuthenticated = await this.board.checkUserIsAuthenticated(boardId, authenticatedUser);
+            var userRole = await this.board.checkUserRole(boardId, authenticatedUser);
+            console.log(userIsAuthenticated);
+            console.log(userRole);
+            
+            if (userIsAuthenticated && userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" | userRole[0].role_name == "ROLE_ADMIN")) {
+                let query1 = "UPDATE card SET position=" + cards[0].position + " WHERE id=" + cards[0].id + "";
+                let query2 = "UPDATE card SET position=" + cards[1].position + " WHERE id="+cards[1].id+"";
+                return this.connection.query(this.connectionObject, query1).
+                then((data1) => {
+                    return this.connection.query(this.connectionObject, query2).
+                    then((data2) => {
+                        res.message = "Card has been updated";
+                        res.status = 200;
+                        res.data = Object.assign(data1,data2);
+                        return res;
+                    }).catch(function (err) {
+                        console.log(err);
+                        res.message = err;
+                        res.status = 406;
+                        return res;
+                    })
+                }).catch(function (err) {
+                    console.log(err);
+                    res.message = err;
+                    res.status = 406;
+                    return res;
+                })
+            } else {
+                res.message = "User not authorized";
+                res.status = 403;
+                return [res];
+            }
+        }else {
+            res.message = "Board does not exists.";
+            res.status = 403;
+            return [res];
+        }
+    }
+    list.prototype.updateCardPositionInList = async function (param) {
+        let res = new response();
+        const { authenticatedUser, boardId, cardsPositionToBePlus,cardsPositionToBeMinus } = param;        
+        var checkBoardExists = await this.board.checkBoardExists(boardId);
+        if(checkBoardExists)
+        {
+            var userIsAuthenticated = await this.board.checkUserIsAuthenticated(boardId, authenticatedUser);
+            var userRole = await this.board.checkUserRole(boardId, authenticatedUser);
+            console.log(userIsAuthenticated);
+            console.log(userRole);
+            
+            if (userIsAuthenticated && userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" | userRole[0].role_name == "ROLE_ADMIN")) {
+                return Promise.all([updateCardPositionInList(0, cardsPositionToBePlus, "plus", this), updateCardPositionInList(0, cardsPositionToBeMinus, "minus", this)])
+                .then(([value, rest]) => {
+                    let arr = [value, ...rest];
+                    let response = arr.reduce((e,j) => {
+                    return Object.assign(e,j)
+                })
+                return [response];
+                })
+            } else {
+                res.message = "User not authorized";
+                res.status = 403;
+                return [res];
+            }
+        }else {
+            res.message = "Board does not exists.";
+            res.status = 403;
+            return [res];
+        }
     }
     return list;
 })();
