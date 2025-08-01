@@ -228,15 +228,15 @@ router.delete('/delete', async function (req, res) {
      *        description: Not Found
      *      500:
      */
-router.get('/getAllProject', async function (req, res) {
-    Object.assign(req.body, { userId: req.authenticatedUser.id })
+router.get('/getAllProject/:itemLimit/:currentOffset', async function (req, res) {
+    Object.assign(req.params, { userId: req.authenticatedUser.id })
     if (!req.authenticatedUser) {
         res.status(400)
             .send(new error("Send Proper data."));
         return;
     } else {
         try {
-            var response = await project.getAllProject(req.body);
+            var response = await project.getAllProject(req.params);
             console.log(response);
             
             res.status(response.status)

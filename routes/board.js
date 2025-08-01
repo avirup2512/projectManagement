@@ -228,7 +228,7 @@ router.delete('/delete', async function (req, res) {
      *        description: Not Found
      *      500:
      */
-router.get('/getAllBoard/:projectId', async function (req, res) {
+router.get('/getAllBoard/:projectId/:itemLimit/:offset', async function (req, res) {
     const { projectId } = req.params;
     Object.assign(req.params, { userId: req.authenticatedUser.id })
     if (!req.authenticatedUser || !projectId) {

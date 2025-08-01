@@ -680,10 +680,10 @@ router.post('/copyCard', async function (req, res) {
         } else {
             try {
                 var response = await card.copyCard(req.body);
-                console.log(response[0]);
+                console.log(response);
                 
-                res.status(response[0].status)
-                .send(response[0])
+                res.status(response.status)
+                .send(response)
             } catch (err) {
                 console.log(err);
                 res.status(400)

@@ -275,37 +275,49 @@ var projectController = (function () {
     }
     project.prototype.getAllProject = async function (param)
     {
-        console.log("USER_ID");
+        let self = this;
         let res = new response();
-        let { userId } = param;        
-        console.log(userId);
+        let { userId, itemLimit, currentOffset } = param;        
+        itemLimit = itemLimit ? itemLimit : 5
+        currentOffset = currentOffset ? currentOffset : 0;
         let query = "SELECT  p.id AS project_id, p.user_id, p.name AS project_name, pu.user_id AS project_user_id, u.first_name, u.last_name, r.role, r.id as role_id FROM  project p JOIN  project_user pu ON p.id = pu.project_id JOIN user u on u.id = pu.user_id  JOIN  role r ON pu.role_id = r.id "+
         "WHERE p.id IN (SELECT project_id FROM project_user WHERE user_id = "+userId+") "+
-        "ORDER BY p.id";       
+        "ORDER BY p.id LIMIT "+itemLimit+" OFFSET "+currentOffset+" ";       
         return this.connection.query(this.connectionObject, query)
             .then(function (data) {
-                let projectResponse = {};
-                data.forEach((e) => {
-                if (!projectResponse.hasOwnProperty(e.project_id))
-                {
-                    projectResponse[e.project_id] = {};
-                }
-                    projectResponse[e.project_id].name = e.project_name;
-                    projectResponse[e.project_id].id = e.project_id;
-                    projectResponse[e.project_id].project_user_id = e.user_id;
-                    const creator = e.user_id == e.project_user_id ? true : false;
-                if (projectResponse[e.project_id].user && projectResponse[e.project_id].user.length > 0)
-                {
-                    projectResponse[e.project_id].user.push({ id: e.project_user_id, role: e.role, role_id:e.role_id, first_name: e.first_name, last_name: e.last_name, email: e.email, creator });
-                } else {
-                    projectResponse[e.project_id].user = [];
-                    projectResponse[e.project_id].user.push({id:e.project_user_id,role:e.role, role_id:e.role_id, first_name:e.first_name, last_name:e.last_name,email:e.email, creator})
-                }
-            })
-            res.message = "Project Has been fetched";
-            res.status = 200;
-                res.data = projectResponse;
+                let query2 = "SELECT COUNT(*) as total from project WHERE user_id = "+userId+"";
+                return self.connection.query(self.connectionObject,query2)
+                    .then(function (data2) {    
+                        let projectResponse = {};
+                        data.forEach((e) => {
+                        if (!projectResponse.hasOwnProperty(e.project_id))
+                        {
+                            projectResponse[e.project_id] = {};
+                        }
+                            projectResponse[e.project_id].name = e.project_name;
+                            projectResponse[e.project_id].id = e.project_id;
+                            projectResponse[e.project_id].project_user_id = e.user_id;
+                            const creator = e.user_id == e.project_user_id ? true : false;
+                        if (projectResponse[e.project_id].user && projectResponse[e.project_id].user.length > 0)
+                        {
+                            projectResponse[e.project_id].user.push({ id: e.project_user_id, role: e.role, role_id:e.role_id, first_name: e.first_name, last_name: e.last_name, email: e.email, creator });
+                        } else {
+                            projectResponse[e.project_id].user = [];
+                            projectResponse[e.project_id].user.push({id:e.project_user_id,role:e.role, role_id:e.role_id, first_name:e.first_name, last_name:e.last_name,email:e.email, creator})
+                        }
+                        })
+                        res.message = "Project Has been fetched";
+                        res.status = 200;
+                        res.totalCount = data2[0].total;
+                        res.data = projectResponse;
+                        return res;
+                     }).catch(function (err) {
+                console.log("err");
+                
+                res.message = err;
+                res.status = 406;
                 return res;
+            })
             }).catch(function (err) {
                 console.log("err");
                 res.message = err;

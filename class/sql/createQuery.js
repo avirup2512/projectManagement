@@ -15,8 +15,8 @@ var createQuery = {
         "type varchar(255))",
     createBoardTable: "CREATE TABLE board" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
-        "user_id int, name varchar(255), create_date DATETIME DEFAULT CURRENT_TIMESTAMP, is_public BOOLEAN DEFAULT false," +
-        "FOREIGN KEY (user_id) REFERENCES user(id))",
+        "user_id int, name varchar(255), create_date DATETIME DEFAULT CURRENT_TIMESTAMP, is_public BOOLEAN DEFAULT false, project_id int," +
+        "FOREIGN KEY (user_id) REFERENCES user(id), FOREIGN KEY (project_id) REFERENCES project(id))",
     createBoardUserTable: "CREATE TABLE board_user" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
         "user_id int, board_id int, role_id int," +
@@ -33,7 +33,7 @@ var createQuery = {
         "name varchar(255), color varchar(255))",
     createListTable: "CREATE TABLE list" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
-        "board_id int, name varchar(255), created_date DATETIME DEFAULT CURRENT_TIMESTAMP, position int," +
+        "board_id int, name varchar(255), created_date DATETIME DEFAULT CURRENT_TIMESTAMP, position int, is_archived int DEFAULT 0," +
         "FOREIGN KEY (board_id) REFERENCES board(id))",
     createTagTable: "CREATE TABLE tag" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
@@ -41,7 +41,7 @@ var createQuery = {
     createCardsTable: "CREATE TABLE card" +
         "(id int PRIMARY KEY AUTO_INCREMENT, user_id int, "+
         "list_id int, name varchar(255),description varchar(255), create_date DATETIME DEFAULT CURRENT_TIMESTAMP," +
-        "is_active BOOLEAN DEFAULT true, is_complete BOOLEAN DEFAULT false, due_date DATETIME, reminder_date DATETIME, progress int, position int" +
+        "is_active BOOLEAN DEFAULT true, is_complete BOOLEAN DEFAULT false, due_date DATETIME, reminder_date DATETIME, progress int, position int, " +
         "FOREIGN KEY (list_id) REFERENCES list(id))",
     createCardUserTable: "CREATE TABLE card_user" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+

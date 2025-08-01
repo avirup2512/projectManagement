@@ -154,6 +154,17 @@ async function createTables()
                 console.log(err);
         })
     };
+     // PROJECT TABLE CREATE
+    var projectTableExists = await con.checkTableExists(connectionObject,dbName,"project");
+    if(!projectTableExists)
+    {
+        con.createTable(connectionObject, createQuery.createProjectTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
     // BOARD TABLE CREATE
     var boardTableExits = await con.checkTableExists(connectionObject,dbName,"board");
     if(!boardTableExits)
@@ -291,28 +302,6 @@ async function createTables()
     if(!cardTagTableExists)
     {
         con.createTable(connectionObject, createQuery.createCardTagTable)
-            .then(function (data) {
-                console.log(data);
-            }).catch(function (err) {
-                console.log(err);
-        })
-    };
-    // PROJECT TABLE CREATE
-    var projectTableExists = await con.checkTableExists(connectionObject,dbName,"project");
-    if(!projectTableExists)
-    {
-        con.createTable(connectionObject, createQuery.createProjectTable)
-            .then(function (data) {
-                console.log(data);
-            }).catch(function (err) {
-                console.log(err);
-        })
-    };
-    // PROJECT BOARD TABLE CREATE
-    var projectBoardTableExists = await con.checkTableExists(connectionObject,dbName,"project_board");
-    if(!projectBoardTableExists)
-    {
-        con.createTable(connectionObject, createQuery.createProjectBoardTable)
             .then(function (data) {
                 console.log(data);
             }).catch(function (err) {

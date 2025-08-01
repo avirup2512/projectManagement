@@ -329,8 +329,7 @@ var cardController = (function () {
         let self = this;
         let res = new response();
         let { authenticateUserId, users, cardId, boardId } = param;
-        console.log("HUHUHUU");
-        
+        console.log("ADD USERS HUHUHUU ==================================");
         console.log(users);
         
         let hasUser = await this.user.checkUserExistsById(authenticateUserId);
@@ -367,19 +366,18 @@ var cardController = (function () {
                             userToAddedd.push(incomingUserMap.get(e.user_id))
                         }
                     });
+                    if (users.length > 0)
+                    {
+                        users.forEach((e) => {
+                            if (!existingUserMap.has(e.user_id)) {
+                                userToAddedd.push(e);
+                            }
+                        });
+                    }
                 } else {
                     userToAddedd = users;
                 }
-                if (users.length > 0)
-                {
-                    users.forEach((e) => {
-                        if (!existingUserMap.has(e.user_id)) {
-                            userToAddedd.push(e);
-                        }
-                    });
-                }
                 console.log("THOMBA");
-                
                 console.log(userToAddedd);
                 console.log(cardId);
                 
@@ -394,8 +392,6 @@ var cardController = (function () {
                     return [...response];
                 });
             })
-            // users.push({ user_id: userId, role: roleId });
-            return addUserToCard(0, users, cardId, self);
         }else {
             res.message = "User is not authorized.";
             res.status = 403;
@@ -415,8 +411,8 @@ var cardController = (function () {
         // let tagExists = await this.checkTagIsExists(tag);
         let tagExistsInCard = await this.checkTagExistsInCard(tag, cardId);
         console.log(hasUser);
-        console.log(userRoleForBoard);
-        console.log(userRole);
+        console.log("TAGS"+userRoleForBoard);
+        console.log("TAGS" +userRole);
         
         if (hasUser && (userRoleForBoard.length > 0 && userRoleForBoard[0].role_name == "ROLE_SUPER_ADMIN") && (userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" || userRole[0].role_name == "ROLE_ADMIN")) && (!tagExistsInCard))
         {
@@ -429,7 +425,8 @@ var cardController = (function () {
                     .then(function (tag2) {
                         res.message = "Tag Has been added";
                         res.status = 200;
-                        res.data = Object.assign(tag,tag2);
+                        res.data = Object.assign(tag, tag2);
+                        console.log("HUHUHUHU");
                         return res;
                         })
                     .catch((err) => {
@@ -873,94 +870,113 @@ var cardController = (function () {
         }
         const p1 = new Promise(async (resolve, reject) => {
             try {
-                const addedTags = await self.addTag({ authenticateUserId: userId, tag: tags[idx].tagName, color: tags[idx].color, cardId, boardId });
-                resolve(addedTags);
+                self.addTag({ authenticateUserId: userId, tag: tags[idx].tagName, color: tags[idx].color, cardId, boardId }).then(async (e) => {
+                    await addMultipleTags(idx + 1,tags,userId,cardId,boardId,self);
+                    resolve(e);
+                })
             } catch (error) {
                 console.log(error);
                 reject(error);
             }
         })
-
-        const p2 = addMultipleTags(idx + 1,tags,userId,cardId,boardId,self);
-        return Promise.all([p1, p2]).then(([value, rest]) => { 
-            let arr = [value, ...rest];
-            let response = arr.reduce((e,j) => {
-                return Object.assign(e,j)
-            })
-            return [response];
+        return p1.then((e) => {
+            console.log("RESPONSE");
+            console.log(e);
+            return e;
         });
     }
     const addMultipleChecklist = async function (idx,checkList,userId,cardId,boardId,self)
     {
+        console.log(idx + "Checklist call");
+        
         if (idx > checkList.length - 1)
         {
             return [];
         }
         const p1 = new Promise(async (resolve, reject) => {
             try {
-                const addedCheckList = await self.addCheckListItem({ authenticateUserId: userId, name: checkList[idx].cliName,isChecked: checkList[idx].cliIsChecked,position:checkList[idx].cliPosition, cardId, boardId });
-                resolve(addedCheckList);
+                self.addCheckListItem({ authenticateUserId: userId, name: checkList[idx].cliName, isChecked: checkList[idx].cliIsChecked, position: checkList[idx].cliPosition, cardId, boardId })
+                    .then(async (e) => {
+                        await addMultipleChecklist(idx + 1, checkList, userId, cardId, boardId, self);
+                        resolve(e)
+                })
             } catch (err) {
                 console.log(err);
                 reject(err);
             }
         })
-
-        const p2 = addMultipleChecklist(idx + 1,checkList,userId,cardId,boardId,self);
-        return Promise.all([p1, p2]).then(([value, rest]) => { 
-            let arr = [value, ...rest];
-            let response = arr.reduce((e,j) => {
-                return Object.assign(e,j)
-            })
-            return [response];
+        return p1.then((e) => {
+            console.log("CHECKLIST RESPONSE");
+            console.log(e);
+            return e;
         });
     }
     const copyCardHelper = async function (idx, listIds,userIds,tagIds,checkListIds,userId,card,boardId, self)
     {
+        console.log(idx+" CALL =================================================");
+        
         if (idx > listIds.length - 1)
         {
             return [];
         }
-        const p1 = new Promise(async (resolve, reject) => {
             try {
-                const addedCard = await self.createCards({ userId, name: card.data.name, listId: listIds[idx], description: card.data.description, isActive: card.data.complete, dueDate: card.data.reminder_date, reminderDate: card.data.reminder_date, position: card.data.position });
-                console.log("ADDED CARD HUHU");
+                const addedCard = await self.createCards({ userId, name: card.data[Object.keys(card.data)[0]].name, listId: listIds[idx], description: card.data[Object.keys(card.data)[0]].description, isActive: card.data[Object.keys(card.data)[0]].complete, dueDate: card.data[Object.keys(card.data)[0]].reminder_date, reminderDate: card.data[Object.keys(card.data)[0]].reminder_date, position: card.data[Object.keys(card.data)[0]].position });
+                console.log("ADDED CARD HUHU STARTS ====================================");
                 console.log(addedCard);
                 console.log(userIds);
-                
+                console.log(tagIds);
+                console.log(checkListIds);
+                console.log("ADDED CARD HUHU ENDS ====================================");
                 if (userIds && userIds.length > 0)
                 {
-                    const user = await self.addUsers({ authenticateUserId:userId, users: userIds, cardId: addedCard.data.lastInsertCardId, boardId });
-                    console.log("USER===========");
-                    console.log(user);
+                    const p1 = new Promise(async (resolve, reject) => {
+                        self.addUsers({ authenticateUserId: userId, users: userIds, cardId: addedCard.data.lastInsertCardId, boardId }).then(async (e) => {
+                        console.log("USER ADDDED ===========");
+                        console.log(e);
+                        if (e[0].status && e[0].status == 200)
+                        {
+                            console.log(tagIds);
+                            
+                            if (tagIds && tagIds.length > 0)
+                            {
+                                addMultipleTags(0, tagIds, userId, addedCard.data.lastInsertCardId, boardId, self).then(async(e2) => {
+                                    console.log("TAG========");
+                                    console.log(e2.status);
+                                    if (e2.status && e2.status == 200) {
+                                        if (checkListIds && checkListIds.length > 0)
+                                        {
+                                            console.log(checkListIds);
+                                            
+                                            addMultipleChecklist(0, checkListIds, userId, addedCard.data.lastInsertCardId, boardId, self).then(async (e3) => {
+                                                await copyCardHelper(idx + 1, listIds, userIds, tagIds, checkListIds, userId, card, boardId, self);
+                                                resolve({ status: 200, message: "Hoyegechhe" });
+                                            })
+                                        } else {
+                                            await copyCardHelper(idx + 1, listIds, userIds, tagIds, checkListIds, userId, card, boardId, self);
+                                            resolve({ status: 200, message: "Hoyegechhe" });
+                                        }
+                                    }
+                                })
+                                
+                            } else {
+                                await copyCardHelper(idx + 1, listIds, userIds, tagIds, checkListIds, userId, card, boardId, self);
+                                resolve({ status: 200, message: "Hoyegechhe" });
+                            }
+                        }
+                    })
+                    })
+                    return p1.then((e) => {
+                        console.log(e);
+                        
+                        return e;
+                    });
+                } else {
+                    return addedCard;
                 }
-                if (tagIds && tagIds.length > 0)
-                {
-                    const tags = await addMultipleTags(0, tagIds, userId, addedCard.data.lastInsertCardId, boardId, self);
-                    console.log("TAG========");
-                    console.log(tags);
-                }
-                if (checkListIds && checkListIds.length > 0)
-                {
-                    await addMultipleChecklist(0, checkListIds, userId, addedCard.data.lastInsertCardId, boardId, self);
-                }
-                resolve({status:200, message:"Hoyegechhe"})
             } catch (error) {
                 console.log(error);
                 reject(error);
             }
-        })
-        
-
-        const p2 = await copyCardHelper(idx + 1, listIds,userIds,tagIds,checkListIds,userId,card,boardId, self);
-
-        return Promise.all([p1, p2]).then(([value, rest]) => { 
-            let arr = [value, ...rest];
-            let response = arr.reduce((e,j) => {
-                return Object.assign(e,j)
-            })
-            return [response];
-        });
     }
     card.prototype.copyCard = async function (params)
     {
@@ -973,13 +989,23 @@ var cardController = (function () {
             let hasUser = await this.user.checkUserExistsById(authenticateUserId);
             let userRoleForBoard = await this.board.checkUserRole(boardId, authenticateUserId);
             let userRole = await this.checkUserRole(cardId, authenticateUserId);
-            if (hasUser && (userRoleForBoard.length > 0 && userRoleForBoard[0].role_name == "ROLE_SUPER_ADMIN") && (userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" || userRole[0].role_name == "ROLE_ADMIN")))
+            if (listIds.length > 0 && hasUser && (userRoleForBoard.length > 0 && userRoleForBoard[0].role_name == "ROLE_SUPER_ADMIN") && (userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" || userRole[0].role_name == "ROLE_ADMIN")))
             {
                 
                 let card = await this.getCardById({ boardId, userId: authenticateUserId, cardId });
-                const copiedCard = await copyCardHelper(0, listIds,card.data[cardId].users,card.data[cardId].tags, card.data[cardId].checkList,authenticateUserId, card,boardId, self);
-                console.log(copiedCard);
-                return copiedCard;
+                console.log("FETCHED CARD ================================");
+                console.log(card);
+                console.log(card.data[cardId].users);
+                console.log(card.data[cardId].tags);
+                console.log(card.data[cardId].checkList);
+                console.log(listIds);
+                
+                return copyCardHelper(0, listIds, card.data[cardId].users, card.data[cardId].tags, card.data[cardId].checkList, authenticateUserId, card, boardId, self).then((e) => {
+                    console.log(e);
+                    return e
+                })
+                //console.log(copiedCard);
+                return {};
             }else {
                 res.message = "User is not authorized.";
                 res.status = 403;

@@ -234,7 +234,7 @@ var listController = (function () {
         if (boardExists)
         {
             let query = "SELECT result.*,u.first_name,u.last_name,u.email, cu.id as card_user_id, cu.user_id as card_user_user_id, cu.role_id as card_user_role_id, r.role as role_name, t.tag, t.id as tagId FROM (SELECT l.*, c.id as card_id, c.name as card_name, c.list_id as card_list_id, c.description as card_description,c.is_complete as card_complete, c.reminder_date as card_reminder_date, c.due_date as card_due_date, c.create_date as card_create_date, c.user_id as card_creator, c.position as card_position "+
-            "FROM list l LEFT JOIN card c on c.list_id = l.id WHERE board_id = " + boardId + ") AS result LEFT JOIN card_user cu ON cu.card_id = result.card_id left join user u on cu.user_id = u.id left join role r on cu.role_id = r.id left join card_tag ct on  ct.card_id = result.card_id left join tag t on t.id = ct.tag_id  order by result.card_id, result.position DESC"; // WHERE cu.user_id = " + userId + "
+            "FROM list l LEFT JOIN card c on c.list_id = l.id WHERE l.board_id = " + boardId + ") AS result LEFT JOIN card_user cu ON cu.card_id = result.card_id left join user u on cu.user_id = u.id left join role r on cu.role_id = r.id left join card_tag ct on  ct.card_id = result.card_id left join tag t on t.id = ct.tag_id  order by result.card_id, result.position DESC"; // WHERE cu.user_id = " + userId + "
             return this.connection.query(this.connectionObject, query)
                 .then(function (data) {    
                     console.log(data);
@@ -289,6 +289,7 @@ var listController = (function () {
                                     const creator = e.card_creator == e.card_user_user_id ? true : false
                                     cardUser.push({ user_id: e.card_user_user_id,role:e.card_user_role_id,role_name:e.role_name, name: e.first_name + " " + e.last_name, email: e.email,creator })
                                     listObject[e.id].cards.push({ id: e.card_id, name: e.card_name, description: e.card_description, complete: e.card_complete, position:e.card_position, users: cardUser, tags: cardTag });
+                                    
                                     // Add Card SET
                                     cardMap.set(e.card_id, listObject[e.id].cards.length - 1);
                                     cardUserSet.add(e.card_id + e.card_user_user_id);
