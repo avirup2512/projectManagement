@@ -23,7 +23,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 const corsOpts = {
-    origin: 'http://localhost:5173'
+    origin: 'http://65.108.57.224'
 };
 app.use(cors(), function (req, res, next) {
     if (req.url.split('/')[2] !== "auth")
