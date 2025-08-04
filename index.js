@@ -26,7 +26,7 @@ const corsOpts = {
     origin: 'http://localhost:5173'
 };
 app.use(cors(), function (req, res, next) {
-    if (req.url.split('/')[1] !== "auth")
+    if (req.url.split('/')[2] !== "auth")
     {        
         const token = req.headers.authorization ? req.headers.authorization.split(' ')[1] : null;
         if (!token)
