@@ -75,7 +75,7 @@ app.use(cors(), function (req, res, next) {
         next();
     }
 });
-app.use('/auth', cors(corsOpts), authentication);
+app.use('/api/auth', cors(corsOpts), authentication);
 app.use('/board', cors(corsOpts), board);
 app.use('/list', cors(corsOpts), list);
 app.use('/card', cors(corsOpts), card);
