@@ -89,7 +89,7 @@ async function createTables()
     let con = new connection(mysql);
     let connectionObject = con.getConnection();
     con.connect(connectionObject);
-    let dbName = "projectManagement";
+    let dbName = "projectmanagement";
     // ROLE TABLE CREATE
     var roleTableExists = await con.checkTableExists(connectionObject,dbName,"role");
     if(!roleTableExists)
