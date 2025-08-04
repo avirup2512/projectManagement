@@ -133,15 +133,15 @@ router.post('/create', async function (req, res) {
      *        description: Server Error
      */
 router.put('/edit', async function (req, res) {
-    let { boardId, name, isPublic } = req.body;
+    let { projectId, name, isPublic } = req.body;
     Object.assign(req.body, { userId: req.authenticatedUser.id })
-    if (!req.authenticatedUser || !boardId || !name ) {
+    if (!req.authenticatedUser || !projectId || !name ) {
         res.status(400)
         .send(new error("Send Proper data."));
         return;
     } else {
         try {
-            var response = await project.editBoard(req.body);
+            var response = await project.editProject(req.body);
             console.log(response);
             
             res.status(response[0].status)

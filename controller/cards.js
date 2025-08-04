@@ -1,7 +1,7 @@
 const response = require("../class/response");
 const boardController = require("./board");
 const userController = require("./user");
-const e = require("express");
+const activity = require("../helper/textcontent");
 var cardController = (function () {
     let connection;
     let connectionObject;
@@ -18,7 +18,57 @@ var cardController = (function () {
         const date = new Date(isoString);
         return date.toISOString().slice(0, 19).replace('T', ' ');
     }
-    function addUserToCard(idx, users,cardId,self)
+    function addCardActivity(cardId, userId, activityObject, self)
+    { 
+        console.log(activityObject);
+        
+        let query = "INSERT INTO card_activity (card_id, user_id,activity) VALUES(" + cardId + ", " + userId + ", '" + activityObject?.activity + "')";
+        self.connection.query(self.connectionObject, query)
+            .then(async function (data3) {
+                console.log(data3);
+                
+                if (activityObject.hasUser)
+                {
+                    await self.connection.query(self.connectionObject, "SELECT created_date FROM card_activity WHERE id = " + data3.insertId + "")
+                        .then(async function (data4) {
+                        console.log(data4);
+                        await self.connection.query(self.connectionObject, "INSERT INTO card_activity_added_user (card_activity_id,added_user_id,type,created_date) VALUES(" + data3.insertId + "," + activityObject.userId + "," + activityObject.type + ", '" + toMySQLDateTime(data4[0].created_date) + "')")
+                        .then(async function (data5) {
+                            return {status:200};
+                        }).catch(function (err) {
+                            console.log(err);
+                            return{message:err,status:406};
+                        })
+                        return {status:200};
+                    }).catch(function (err) {
+                        console.log(err);
+                        return{message:err,status:406};
+                    })
+                } else if (activityObject.hasChecklist)
+                {
+                    await self.connection.query(self.connectionObject, "SELECT created_date FROM card_activity WHERE id = " + data3.insertId + "")
+                        .then(async function (data4) {
+                        console.log(data4);
+                        await self.connection.query(self.connectionObject, "INSERT INTO `card_activity_added_checklist` (card_activity_id,added_checklist_id,type,created_date) VALUES(" + data3.insertId + "," + activityObject.checklistId + "," + activityObject.type + ", '" + toMySQLDateTime(data4[0].created_date) + "')")
+                        .then(async function (data5) {
+                            return {status:200};
+                        }).catch(function (err) {
+                            console.log(err);
+                            return{message:err,status:406};
+                        })
+                        return {status:200};
+                    }).catch(function (err) {
+                        console.log(err);
+                        return{message:err,status:406};
+                    })
+                }
+            return {status:200};
+        }).catch(function (err) {
+            console.log(err);
+            return{message:err,status:406};
+        })
+    }
+    function addUserToCard(idx, users,cardId,loggedInUser,self)
     {
         let res = new response();
         if (idx > users.length - 1)
@@ -34,7 +84,9 @@ var cardController = (function () {
         "VALUES('" + userID + "','" + cardId + "','" +roleID + "') ON DUPLICATE KEY UPDATE role_id = VALUES(role_id);";
         const p1 = new Promise((resolve, reject) => {
             self.connection.query(self.connectionObject, query)
-                .then(function (data3) {
+                .then(async function (data3) {
+                    let activityObject = { activity: activity.CARD_ADD_USER, hasUser: true, userId: userID, type:1 };
+                    await addCardActivity(cardId, loggedInUser, activityObject, self);
                     res.message = "Users Has been added";
                     res.status = 200;
                     res.data = data3;
@@ -45,7 +97,7 @@ var cardController = (function () {
                     reject(res);
                 })
         });
-        const p2 = addUserToCard(idx + 1, users, cardId, self);
+        const p2 = addUserToCard(idx + 1, users, cardId,loggedInUser, self);
         return Promise.all([p1, p2]).then(([value, rest]) => { 
             let arr = [value, ...rest];
             let response = arr.reduce((e,j) => {
@@ -54,6 +106,42 @@ var cardController = (function () {
             return [response];
         });
     }
+    
+    const deleteUserToCard = function (idx, users,cardId,loggedInUser,self)
+    {        
+        let res = new response();
+        if(idx > users.length-1)
+        {
+            return [];
+        }
+        let userID = users[idx].user_id || users[idx].id;
+        let insertBoardUserQuery = "DELETE FROM card_user WHERE card_id= '"+cardId+"' AND user_id = '"+userID+"'";
+        let pr = new Promise((resolve, reject) => {
+                self.connection.query(self.connectionObject, insertBoardUserQuery)
+                .then(async function (data3) {  
+                    data3.cardId = cardId;      
+                    let activityObject = { activity: activity.CARD_REMOVE_USER, hasUser: true, userId: userID, type:0 };
+                    await addCardActivity(cardId, loggedInUser, activityObject, self);
+                    res.message = "Card Has been deleted";
+                    res.status = 200;
+                    res.data = data3;
+                    resolve(res);
+                }).catch(function (err) {
+                console.log(err);
+                res.message = err;
+                res.status = 400;
+                reject(res);
+            })
+        })
+        let pr2 = deleteUserToCard(idx+1, users,cardId,loggedInUser,self)
+        return Promise.all([pr, pr2]).then(([value, rest]) => { 
+            let arr = [value, ...rest];
+            let response = arr.reduce((e,j) => {
+                return Object.assign(e,j)
+            })
+            return [response];
+        });
+    } 
     const updatePosition = async function (idx,cards,self)
     {
         let res = new response();
@@ -112,38 +200,6 @@ var cardController = (function () {
                 return false;
         })
     }
-    const deleteUserToCard = function (idx, users,cardId,self)
-    {        
-        let res = new response();
-        if(idx > users.length-1)
-        {
-            return [];
-        }
-        let insertBoardUserQuery = "DELETE FROM card_user WHERE card_id= '"+cardId+"' AND user_id = '"+users[idx].user_id+"'";
-        let pr = new Promise((resolve, reject) => {
-                self.connection.query(self.connectionObject, insertBoardUserQuery)
-                .then(function (data3) {  
-                data3.cardId = cardId;      
-                res.message = "Card Has been deleted";
-                res.status = 200;
-                res.data = data3;
-                resolve(res);
-                }).catch(function (err) {
-                console.log(err);
-                res.message = err;
-                res.status = 400;
-                reject(res);
-            })
-        })
-        let pr2 = deleteUserToCard(idx+1, users,cardId,self)
-        return Promise.all([pr, pr2]).then(([value, rest]) => { 
-            let arr = [value, ...rest];
-            let response = arr.reduce((e,j) => {
-                return Object.assign(e,j)
-            })
-            return [response];
-        });
-    } 
     card.prototype.checkUserRole = async function (cardId, userId) {
         let query = "SELECT DISTINCT r.role AS role_name " +
             "FROM card_user cu " +
@@ -210,6 +266,8 @@ var cardController = (function () {
                 let query = "SELECT * FROM role";
                 return self.connection.query(self.connectionObject, query)
                     .then(function (data2) {
+                        console.log(data2);
+                        
                     let roleId = null;
                     data2.forEach(function (e) {
                         if (e.role == "ROLE_SUPER_ADMIN")
@@ -218,22 +276,29 @@ var cardController = (function () {
                     let insertCardUserQuery = "INSERT INTO card_user (user_id,card_id,role_id)" +
                     "VALUES('" +  userId + "','" + data.insertId + "','"+ roleId +"')";
                     return self.connection.query(self.connectionObject, insertCardUserQuery)
-                        .then(function (data3) {                
-                    res.message = "Card Has been created";
-                    res.status = 200;
-                        res.data = {...data3, lastInsertCardId:data.insertId};
-                        return res;
-                    }).catch(function (err) {
-                        res.message = err;
-                        res.status = 406;
-                        return res;
-                })
+                        .then(async function (data3) {
+                            console.log(data3);
+                            let activityObject = {activity:activity.CARD_CREATE}
+                            await addCardActivity(data.insertId, userId, activityObject, self);                            
+                            res.message = "Card Has been created";
+                            res.status = 200;
+                                res.data = {...data3, lastInsertCardId:data.insertId};
+                                return res;
+                            }).catch(function (err) {
+                                res.message = err;
+                                res.status = 406;
+                                return res;
+                            })
                 }).catch(function (err) {
+                    console.log(err);
+                    
                     res.message = err;
                     res.status = 406;
                     return res;
                 })
         }).catch(function (err) {
+            console.log(err);
+            
             res.message = err;
             res.status = 406;
             return res;
@@ -303,26 +368,30 @@ var cardController = (function () {
                                 " SET is_complete = ?"+
                                 " WHERE id = ?"
                 return this.connection.queryByArray(this.connectionObject, insertBoardQuery, [isComplete,cardId])
-                .then(function (data) {                
-                res.message = "Card Has been updated";
-                res.status = 200;
-                    res.data = data;
+                    .then(async function (data) {    
+                        console.log(data);
+                        const activitiText = (isComplete ? activity.CARD_STATUS_COMPLETED : activity.CARD_STATUS_INCOMPLETE);
+                        activityObject = {activity:activitiText}
+                        await addCardActivity(cardId, userId, activityObject, self);
+                        res.message = "Card Has been updated";
+                        res.status = 200;
+                            res.data = data;
+                            return res;
+                        }).catch(function (err) {
+                            res.message = err;
+                            res.status = 406;
+                            return res;
+                        })
+                }else {
+                    res.message = "User is not authorized.";
+                    res.status = 403;
                     return res;
-                }).catch(function (err) {
-                    res.message = err;
-                    res.status = 406;
-                    return res;
-                })
+                }
             }else {
-                res.message = "User is not authorized.";
+                res.message = "Board does not exists.";
                 res.status = 403;
                 return res;
             }
-        }else {
-            res.message = "Board does not exists.";
-            res.status = 403;
-            return res;
-        }
     }
     card.prototype.addUsers = async function (param)
     {
@@ -381,7 +450,7 @@ var cardController = (function () {
                 console.log(userToAddedd);
                 console.log(cardId);
                 
-                return Promise.all([addUserToCard(0, userToAddedd, cardId, self), deleteUserToCard(0, userToBeDeleted, cardId, self)])
+                return Promise.all([addUserToCard(0, userToAddedd, cardId,authenticateUserId, self), deleteUserToCard(0, userToBeDeleted, cardId,authenticateUserId, self)])
                     .then(([value, rest]) => { 
                     let arr = [value, ...rest];
                     let response = arr.reduce((e,j) => {
@@ -565,7 +634,9 @@ var cardController = (function () {
                         let cardTagSet = new Set();
                         let checkListSet = new Set();
                         let commentSet = new Set();
-                    data.forEach((e) => {
+                        data.forEach((e) => {
+                        console.log(e.reminder_date);
+                        
                         if (!cardObject.hasOwnProperty(e.id))
                         {
                             cardObject[e.id] = {};
@@ -574,6 +645,7 @@ var cardController = (function () {
                         cardObject[e.id].name = e.name;
                         cardObject[e.id].list_id = e.list_id;
                         cardObject[e.id].reminder_date = e.reminder_date;
+                        cardObject[e.id].due_date = e.due_date;
                         cardObject[e.id].description = e.description;
                         cardObject[e.id].complete = e.is_complete;
                         cardObject[e.id].position = e.position;
@@ -627,6 +699,44 @@ var cardController = (function () {
                         return res;
                     })
                     } else {
+                        res.message = "User is not authorized";
+                        res.status = 403;
+                        return res;
+                    }
+        } else {
+            res.message = "Board does not exists";
+            res.status = 403;
+            return res;
+        }
+    }
+    card.prototype.getCardActivity = async function (params)
+    {
+        let res = new response();
+        let { boardId,userId ,cardId} = params;    
+        let boardExists = await this.board.checkBoardExists(boardId);
+        if (boardExists) {
+            var userIsAuthenticated = await this.board.checkUserIsAuthenticated(boardId, userId);
+            if (userIsAuthenticated) {
+                let query = "SELECT cacl.checklistName, card_activity.*, concat(u.first_name,' ',u.last_name) as full_name , u.email, caau.editedUserFullName, caau.editedUserEmail , caau.editedUserId, caau.type FROM card_activity JOIN user u on card_activity.user_id = u.id LEFT JOIN (SELECT ca.type, ca.card_activity_id, ca.created_date, concat(u.first_name,' ',u.last_name) as editedUserFullName, u.email as editedUserEmail, u.id as editedUserId FROM `card_activity_added_user` ca JOIN user u on ca.added_user_id = u.id ) as caau on card_activity.id = caau.card_activity_id AND card_activity.created_date = caau.created_date LEFT JOIN (SELECT cl.card_activity_id,cl.added_checklist_id, cli.name as checklistName FROM `card_activity_added_checklist` cl JOIN `checklist_item` cli on cl.added_checklist_id = cli.id) as cacl ON  cacl.card_activity_id = card_activity.id WHERE card_id = " + cardId + "";
+                return this.connection.query(this.connectionObject, query)
+                    .then(function (data) { 
+                        if(data.length > 0)
+                        {
+                            res.status = 200;
+                            res.data = data; 
+                        } else {
+                            res.status = 406;
+                            res.data = data; 
+                        }
+                        return res;
+                    })
+                    .catch(function (err) {
+                        console.log(err);
+                        res.message = err;
+                        res.status = 406;
+                        return res;
+                    })
+            } else {
                         res.message = "User is not authorized";
                         res.status = 403;
                         return res;
@@ -712,7 +822,9 @@ var cardController = (function () {
         {
             let query = "INSERT INTO `checklist_item` (card_id,name,is_checked,position) VALUES('"+cardId+"','"+name+"','"+isChecked+"', '"+position+"')";
             return self.connection.query(self.connectionObject, query)
-            .then(function (data) {
+                .then(async function (data) {
+                const activityObject = {activity:activity.CARD_CHECKLIST_ADDED,hasChecklist:true,type:1,checklistId:data.insertId}
+                await addCardActivity(cardId, authenticateUserId, activityObject, self);
                 res.message = "Checklist Has been added";
                 res.status = 200;
                 res.data = Object.assign(data);
@@ -735,7 +847,9 @@ var cardController = (function () {
         {
             let query = "UPDATE `checklist_item` set name='"+name+"', is_checked='"+isChecked+"', position='"+position+"' where id='"+id+"'";
             return self.connection.query(self.connectionObject, query)
-            .then(function (data) {
+                .then(async function (data) {
+                const activityObject = {activity:activity.CARD_CHECKLIST_EDITED,hasChecklist:true,type:1,checklistId:id}
+                await addCardActivity(cardId, authenticateUserId, activityObject, self);
                 res.message = "Checklist Has been updated";
                 res.status = 200;
                 res.data = Object.assign(data);
@@ -758,7 +872,9 @@ var cardController = (function () {
         {
             let query = "DELETE FROM `checklist_item` where id='"+id+"'";
             return self.connection.query(self.connectionObject, query)
-            .then(function (data) {
+                .then(async function (data) {
+                const activityObject = {activity:activity.CARD_CHECKLIST_DELETE,hasChecklist:true,type:0,checklistId:null}
+                await addCardActivity(cardId, authenticateUserId, activityObject, self);
                 res.message = "Checklist Has been deleted";
                 res.status = 200;
                 res.data = Object.assign(data);
@@ -771,6 +887,7 @@ var cardController = (function () {
     }
     card.prototype.createComments = async function (params)
     {
+        let self = this;
         let res = new response();
         let { authenticateUserId,listId,boardId , cardId,comment,date} = params;
         var checkBoardExists = await this.board.checkBoardExists(boardId);
@@ -781,17 +898,17 @@ var cardController = (function () {
             if (userIsAuthenticated && userRole.length > 0) {
                 let query = "INSERT INTO comment (card_id,user_id,comment,created_date) VALUES ('" + cardId + "', '" + authenticateUserId + "','" + comment + "', '" + toMySQLDateTime(date) + "')";
                 return this.connection.query(this.connectionObject, query)
-                .then(function (data) {                                    
-                res.message = "Comment Has been added";
-                res.status = 200;
-                    res.data = data;
-                    return res;
-                }).catch(function (err) {
-                    console.log("err");
-                    res.message = err;
-                    res.status = 406;
-                    return res;
-                })
+                    .then(async function (data) {
+                    res.message = "Comment Has been added";
+                    res.status = 200;
+                        res.data = data;
+                        return res;
+                    }).catch(function (err) {
+                        console.log("err");
+                        res.message = err;
+                        res.status = 406;
+                        return res;
+                    })
             }else {
                 res.message = "User is not authorized.";
                 res.status = 403;
@@ -881,14 +998,11 @@ var cardController = (function () {
         })
         return p1.then((e) => {
             console.log("RESPONSE");
-            console.log(e);
             return e;
         });
     }
     const addMultipleChecklist = async function (idx,checkList,userId,cardId,boardId,self)
-    {
-        console.log(idx + "Checklist call");
-        
+    {        
         if (idx > checkList.length - 1)
         {
             return [];

@@ -4,70 +4,61 @@ var connection = (function () {
     function mysqlConnectionInstance(mysql) {
         this.mysql = mysql;
     }
-    mysqlConnectionInstance.prototype.configure = function (host,user,pswd,db,port)
-    {
+    mysqlConnectionInstance.prototype.configure = function (host, user, pswd, db, port) {
         return this.mysql.createConnection({
-        host: host,
-        user: user,
-        password: pswd,
-        database: db,
+            host: host,
+            user: user,
+            password: pswd,
+            database: db,
+            timezone: 'Z'
         });
     }
     mysqlConnectionInstance.prototype.getConnection = function () {
-        return this.configure('localhost', 'root', '25126631', `projectmanagement`);
+        return this.configure('localhost', 'root', '@Aa25126631', `projectmanagement`);
     }
-    
-    mysqlConnectionInstance.prototype.connect = function (con)
-    {
+
+    mysqlConnectionInstance.prototype.connect = function (con) {
         con.connect(function (err) {
-            if (err)
-            {
+            if (err) {
                 console.log(err);
                 return;
             }
-        console.log('connected as id ' + con.threadId);
+            console.log('connected as id ' + con.threadId);
         });
     }
-    mysqlConnectionInstance.prototype.stop = function (con)
-    {
+    mysqlConnectionInstance.prototype.stop = function (con) {
         con.end();
     }
-    mysqlConnectionInstance.prototype.query = async function (con,queryString)
-    {
+    mysqlConnectionInstance.prototype.query = async function (con, queryString) {
         var queryResult = new Promise(async (resolve, reject) => {
             con.query(queryString, await function (err, rows, fields) {
-            if (err)
-            {
-                reject(err);
-            } else {
-                resolve(rows);
-            }
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
             })
-        });        
+        });
         return queryResult;
     }
-     mysqlConnectionInstance.prototype.queryByArray = async function (con,queryString,param)
-    {
+    mysqlConnectionInstance.prototype.queryByArray = async function (con, queryString, param) {
         var queryResult = new Promise(async (resolve, reject) => {
-            con.query(queryString,param, await function (err, rows, fields) {
-            if (err)
-            {
-                reject(err);
-            } else {
-                resolve(rows);
-            }
+            con.query(queryString, param, await function (err, rows, fields) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
             })
-        });        
+        });
         return queryResult;
     }
-    
-    mysqlConnectionInstance.prototype.checkTableExists = async function (con,schemaName,tableName)
-    {
-        return this.query(con, "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='"+schemaName+"' AND table_name='"+tableName+"')")
+
+    mysqlConnectionInstance.prototype.checkTableExists = async function (con, schemaName, tableName) {
+        return this.query(con, "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='" + schemaName + "' AND table_name='" + tableName + "')")
             .then(function (data) {
                 console.log()
-                for (var x in data[0])
-                {
+                for (var x in data[0]) {
                     if (data[0][x] == 0)
                         return false;
                     else
@@ -75,19 +66,17 @@ var connection = (function () {
                 }
             }).catch(function (error) {
                 console.log(error);
-        })
+            })
     }
-    mysqlConnectionInstance.prototype.createTable = async function (con,query)
-    {
+    mysqlConnectionInstance.prototype.createTable = async function (con, query) {
         var queryResult = new Promise(async (resolve, reject) => {
             con.query(query, await function (err, rows, fields) {
-            if (err)
-            {
-                reject(err);
-            } else {
-                resolve(rows);
-            }
-        })
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows);
+                }
+            })
         });
         return queryResult;
     }

@@ -286,6 +286,28 @@ async function createTables()
                 console.log(err);
         })
     };
+    // CARD ACTIVITY ADDED USER TABLE CREATE
+    var cardActivityAddedUserTableExists = await con.checkTableExists(connectionObject,dbName,"card_activity_added_user");
+    if(!cardActivityAddedUserTableExists)
+    {
+        con.createTable(connectionObject, createQuery.createCardActivityAddedUserTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
+    // CARD ACTIVITY ADDED USER TABLE CREATE
+    var cardActivityAddedChecklistTableExists = await con.checkTableExists(connectionObject,dbName,"card_activity_added_checklist");
+    if(!cardActivityAddedChecklistTableExists)
+    {
+        con.createTable(connectionObject, createQuery.createCardActivityAddedChecklistTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
     // TAG TABLE CREATE
     var tagTableExists = await con.checkTableExists(connectionObject,dbName,"tag");
     if(!tagTableExists)

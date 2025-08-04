@@ -46,7 +46,7 @@ var projectController = (function () {
             return [response];
         });
     }
-    const deleteBoardUser = function (idx, users,boardId,self)
+    const deleteProjectUser = function (idx, users,boardId,self)
     {
         let res = new response();
         if(idx > users.length-1)
@@ -69,7 +69,7 @@ var projectController = (function () {
                 reject(res);
             })
         })
-        let pr2 = deleteBoardUser(idx+1, users,boardId,self)
+        let pr2 = deleteProjectUser(idx+1, users,boardId,self)
         return Promise.all([pr, pr2]).then(([value, rest]) => { 
             let arr = [value, ...rest];
             let response = arr.reduce((e,j) => {
@@ -78,9 +78,9 @@ var projectController = (function () {
             return [response];
         });
     } 
-    project.prototype.checkUserIsAuthenticated = async function (boardId, userId) {
-        let query = "SELECT (SELECT user_id FROM board WHERE id='" + boardId + "' && user_id='" + userId + "') as board" +
-                    "(SELECT user_id FROM board_user WHERE board_id='" + boardId + "' && user_id='" + userId + "') as board_user" 
+    project.prototype.checkUserIsAuthenticated = async function (projectId, userId) {
+        let query = "SELECT (SELECT user_id FROM project WHERE id='" + projectId + "' && user_id='" + userId + "') as project" +
+                    "(SELECT user_id FROM project_user WHERE project_id='" + projectId + "' && user_id='" + userId + "') as project_user" 
         return this.connection.query(this.connectionObject,query)
             .then(function (data) {          
                 if (data.length == 0)
@@ -91,11 +91,11 @@ var projectController = (function () {
                 return true;
         })
     }
-    project.prototype.checkUserRole = async function (boardId, userId) {
+    project.prototype.checkUserRole = async function (projectId, userId) {
         let query = "SELECT DISTINCT r.role AS role_name " +
-            "FROM board_user bu " +
-            "JOIN role r ON bu.role_id = r.id " +
-            "WHERE bu.user_id = '" + userId + "' AND bu.board_id = " + boardId + "";
+            "FROM project_user pu " +
+            "JOIN role r ON pu.role_id = r.id " +
+            "WHERE pu.user_id = '" + userId + "' AND pu.project_id = " + projectId + "";
         return this.connection.query(this.connectionObject, query)
             .then(function (data) {
                 if (data.length == 0)
@@ -178,27 +178,30 @@ var projectController = (function () {
             return res;
         })
     }
-    project.prototype.editBoard = async function (param)
+    project.prototype.editProject = async function (param)
     {
         let self = this;
         let res = new response();
-        let { boardId, name, isPublic, users,userId } = param;  
+        let { projectId, name, isPublic, users,userId } = param;  
         if (!users)
         {
             users = [];
         }
         if (isPublic === undefined)
             isPublic = 0;
-        let updateUserQuery = "UPDATE board SET name = '" + name + "',is_public = '" + isPublic + "' WHERE id="+boardId+"";
-        var userCanEdit = await this.checkUserIsAuthenticated(param.boardId, param.userId);
-        let boardExists = await this.checkBoardExists(param.boardId);
-        if (boardExists && userCanEdit)
+        let updateUserQuery = "UPDATE project SET name = '" + name + "',is_public = '" + isPublic + "' WHERE id="+projectId+"";
+        var userCanEdit = await this.checkUserIsAuthenticated(param.projectId, param.userId);
+        console.log(userCanEdit);
+        const userRole = await this.checkUserRole(projectId, userId);
+        if ( userCanEdit && userRole.length > 0 && (userRole[0].role_name == "ROLE_SUPER_ADMIN" || userRole.length > 0 && userRole[0].role_name == "ROLE_ADMIN"))
         {
             return this.connection.query(this.connectionObject, updateUserQuery)
                 .then(function (data) {
-                    let selectExistingQuery = "SELECT user_id from board_user WHERE board_id='" + boardId + "' AND NOT user_id='"+userId+"' ";
+                    let selectExistingQuery = "SELECT user_id from project_user WHERE project_id='" + projectId + "' AND NOT user_id='"+userId+"' ";
                     return self.connection.query(self.connectionObject, selectExistingQuery)
-                        .then(function (existingUser) {                            
+                        .then(function (existingUser) {    
+                            console.log(existingUser);
+                            
                             let incomingUserMap = new Map();
                             users.forEach((e) => {
                                 incomingUserMap.set(e.user_id, { user_id: e.user_id, role: e.role });
@@ -220,18 +223,19 @@ var projectController = (function () {
                                         userToAddedd.push(incomingUserMap.get(e.user_id))
                                     }
                                 });
+                                if (users.length > 0)
+                                {
+                                    users.forEach((e) => {
+                                        if (!existingUserMap.has(e.user_id)) {
+                                            userToAddedd.push(e);
+                                        }
+                                    });
+                                }
                             } else {
                                 userToAddedd = users;
                             }
-                            if (users.length > 0)
-                            {
-                                users.forEach((e) => {
-                                    if (!existingUserMap.has(e.user_id)) {
-                                        userToAddedd.push(e);
-                                    }
-                                });
-                            }
-                            return Promise.all([addBoardUser(0, userToAddedd, boardId, self), deleteBoardUser(0, userToBeDeleted, boardId, self)])
+                            
+                            return Promise.all([addProjectUser(0, userToAddedd, projectId, self), deleteProjectUser(0, userToBeDeleted, projectId, self)])
                                 .then(([value, rest]) => { 
                                 let arr = [value, ...rest];
                                 let response = arr.reduce((e,j) => {
@@ -249,7 +253,7 @@ var projectController = (function () {
             return [res];
         }
     }
-    project.prototype.deleteBoard = async function (param)
+    project.prototype.deleteProject = async function (param)
     {
         var self = this;
         let res = new response();

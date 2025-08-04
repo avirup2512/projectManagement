@@ -111,10 +111,33 @@ var userController = (function () {
     user.prototype.getUserByKeyword = function (param) {
         let { keyword, userEmail } = param;
         let key = "%" + keyword + "%";
+        let result = new response("", 404, {});
+        return this.connection.query(this.connectionObject, "SELECT id,email,first_name,last_name FROM user WHERE email LIKE'" + key + "' OR first_name LIKE'" + key + "' OR last_name LIKE'" + key + "'AND NOT email='"+userEmail+"' LIMIT 100")
+            .then(function (data) {
+                if (data.length == 0) {
+                    result.message = false;
+                    result.status = 404
+                    return result;
+                }
+                else {
+                    result.message = true;
+                    result.data = data;
+                    result.status = 200;
+                    return result;
+                }
+            }).catch(function (err) {
+                result.message = false;
+                result.data = err;
+                return result;
+            })
+    };
+    user.prototype.getProjectUserByKeyword = function (param) {
+        let { keyword, userEmail, projectId } = param;
+        let key = "%" + keyword + "%";
         console.log(userEmail);
         
         let result = new response("", 404, {});
-        return this.connection.query(this.connectionObject, "SELECT id,email,first_name,last_name FROM user WHERE email LIKE'" + key + "' AND NOT email='"+userEmail+"' LIMIT 100")
+        return this.connection.query(this.connectionObject, "SELECT u.id,u.email,u.first_name,u.last_name FROM user u join project_user pu on pu.user_id = u.id  WHERE email LIKE'" + key + "' AND NOT email='"+userEmail+"' OR first_name LIKE'" + key + "' OR last_name LIKE'" + key + "' AND pu.project_id = "+ projectId +" LIMIT 100")
             .then(function (data) {
                 if (data.length == 0) {
                     result.message = false;
@@ -139,8 +162,10 @@ var userController = (function () {
         console.log(userEmail);
         
         let result = new response("", 404, {});
-        return this.connection.query(this.connectionObject, "SELECT u.id,u.email,u.first_name,u.last_name FROM user u join board_user bu on bu.user_id = u.id  WHERE email LIKE'" + key + "' AND NOT email='"+userEmail+"' AND bu.board_id = "+ boardId +" LIMIT 100")
+        return this.connection.query(this.connectionObject, "SELECT u.id,u.email,u.first_name,u.last_name FROM user u join board_user bu on bu.user_id = u.id  WHERE (email LIKE'" + key + "' OR first_name LIKE'" + key + "' OR last_name LIKE'" + key + "') AND NOT email='"+userEmail+"' AND bu.board_id = "+ boardId +" LIMIT 100")
             .then(function (data) {
+                console.log(data);
+                
                 if (data.length == 0) {
                     result.message = false;
                     result.status = 404
@@ -209,9 +234,16 @@ var userController = (function () {
                 res.message = "User Has been created";
                 res.status = 200;
                 res.data = data;
-                return self.connection.query(self.connectionObject, "INSERT INTO user_role(roleId,userId) VALUES(" + existsRole.role.id + "," + data.insertId + ")")
-                    .then(function (data) {
-                        return res;
+                return self.connection.query(self.connectionObject, "INSERT INTO project(name,description,user_id,is_public) VALUES('Default Project','DEfault Project'," + data.insertId + ", 0)")
+                    .then(function (project) {
+                        return self.connection.query(self.connectionObject, "INSERT INTO project_user(user_id,project_id,role_id,is_default) VALUES(" + data.insertId + "," + project.insertId + ",3,1)")
+                        .then(function (data) {
+                            return res;
+                        }).catch(function (err) {
+                            res.message = err;
+                            res.status = 400;
+                            return res;
+                        })
                     }).catch(function (err) {
                     res.message = err;
                     res.status = 400;
@@ -265,7 +297,6 @@ var userController = (function () {
                             res.status = 400;
                             return res;
                         })
-                        return res;
                     }).catch(function (err) {
                     res.message = err;
                     res.status = 400;

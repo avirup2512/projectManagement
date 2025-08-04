@@ -125,7 +125,9 @@ router.post('/login', async function (req, res) {
             .json({
                 success:result.status == 200 ?  true : false,
                 token: token,
-                status:result.status
+                status: result.status,
+                message: "Login Successfull.",
+                data:result.data
             })
         } catch (err) {
             const error = new Error("Error ! Something went wrong");
@@ -194,8 +196,6 @@ router.post('/createUser', async function (req, res) {
         } else {
             try {
                 var result = await user.createUserFromSocialAuth(req.body);
-                console.log(result);
-                
                 token = jwt.sign(
                 {
                     userEmail: email,
@@ -225,8 +225,23 @@ router.post('/createUser', async function (req, res) {
         
         try {
             var response = await user.createUser(req.body);
+            console.log(response);
+            
+            token = jwt.sign(
+                {
+                    userEmail: email,
+                    password: uniqueIdentifier
+                },
+                "SECRET",
+                { expiresIn: "2h" }
+            );
             res.status(response.status)
-            .send(response)
+            .json({
+                success:response.status == 200 ?  true : false,
+                token: token,
+                status: response.status,
+                message:response.message
+            })
         } catch (err) {
             res.status(400)
             .send(new error(err));
@@ -371,6 +386,30 @@ router.post('/getUser', async function (req, res) {
         } else {
             try {
                 let userDetails = await user.getUserByKeyword(req.body);
+                console.log(userDetails);
+                res.status(userDetails.status)
+                .send(userDetails)
+            } catch (err) {
+                console.log(err);
+                
+                res.status(400)
+                .send(new error(err));
+            }
+        }
+    })
+    router.post('/searchByProjectId', async function (req, res) {
+        const token = req.headers.authorization ? req.headers.authorization.split(' ')[1] : null;
+        let { keyword, projectId } = req.body;
+        const decodedToken = jwt.verify(token, "SECRET");                
+        let { userEmail, password } = decodedToken;
+        Object.assign(req.body, { userEmail })
+        if ( !keyword || !projectId) {
+            res.status(400)
+            .send(new error("Send Proper data."));
+            return;
+        } else {
+            try {
+                let userDetails = await user.getProjectUserByKeyword(req.body);
                 console.log(userDetails);
                 res.status(userDetails.status)
                 .send(userDetails)

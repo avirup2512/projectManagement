@@ -75,6 +75,16 @@ var createQuery = {
         "card_id int,user_id int, activity varchar(255), created_date DATETIME DEFAULT CURRENT_TIMESTAMP," +
         "FOREIGN KEY (card_id) REFERENCES card(id)," +
         "FOREIGN KEY (user_id) REFERENCES user(id))",
+    createCardActivityAddedUserTable: "CREATE TABLE card_activity_added_user" +
+        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "card_activity_id int, added_user_id int, type int, created_date DATETIME," +
+        "FOREIGN KEY (card_activity_id) REFERENCES card_activity(id)," +
+        "FOREIGN KEY (added_user_id) REFERENCES user(id) ON DELETE SET NULL)",
+    createCardActivityAddedChecklistTable: "CREATE TABLE card_activity_added_checklist" +
+        "(id int PRIMARY KEY AUTO_INCREMENT,"+
+        "card_activity_id int, added_checklist_id int, type int, created_date DATETIME," +
+        "FOREIGN KEY (card_activity_id) REFERENCES card_activity(id)," +
+        "FOREIGN KEY (added_checklist_id) REFERENCES `checklist_item`(id) ON DELETE SET NULL)",
     createProjectTable: "CREATE TABLE project" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
         "name VARCHAR(255),description LONGTEXT, user_id int, is_public int DEFAULT 1, created_date DATETIME DEFAULT CURRENT_TIMESTAMP)",

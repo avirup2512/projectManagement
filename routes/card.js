@@ -136,7 +136,7 @@ router.post('/create', async function (req, res) {
 router.put('/edit', async function (req, res) {
     let { name, boardId,listId,description,isActive,dueDate,reminderDate,cardId } = req.body;
     Object.assign(req.body, { userId: req.authenticatedUser.id })
-    if (!req.authenticatedUser || !name || !boardId || !listId || !cardId) {
+    if (!req.authenticatedUser || !boardId || !listId || !cardId) {
         res.status(400)
         .send(new error("Send Proper data."));
         return;
@@ -200,7 +200,7 @@ router.put('/edit', async function (req, res) {
      *      500:
      *        description: Server Error
      */
-    router.put('/setStatus', async function (req, res) {
+router.put('/setStatus', async function (req, res) {
         let {boardId,listId,isComplete,cardId } = req.body;
         Object.assign(req.body, { userId: req.authenticatedUser.id })
         if (!req.authenticatedUser || isComplete == undefined || !boardId || !listId || !cardId) {
@@ -218,7 +218,7 @@ router.put('/edit', async function (req, res) {
                 .send(new error(err));
             }
         }
-    })
+})
 /** DELETE Methods */
     /**
      * @openapi
@@ -680,6 +680,27 @@ router.post('/copyCard', async function (req, res) {
         } else {
             try {
                 var response = await card.copyCard(req.body);
+                console.log(response);
+                
+                res.status(response.status)
+                .send(response)
+            } catch (err) {
+                console.log(err);
+                res.status(400)
+                .send(new error(err));
+            }
+        }
+})
+router.post('/cardActivity', async function (req, res) {
+    let { boardId, listId, cardId } = req.body;
+        Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id })
+        if (!req.authenticatedUser || !boardId || !cardId || !listId ) {
+            res.status(400)
+            .send(new error("Send Proper data."));
+            return;
+        } else {
+            try {
+                var response = await card.getCardActivity(req.body);
                 console.log(response);
                 
                 res.status(response.status)
