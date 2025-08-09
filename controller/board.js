@@ -285,25 +285,31 @@ var boardController = (function () {
             .then(function (data) {
                 let query2 = "SELECT COUNT(*) as total from board WHERE project_id=" + projectId + "";
                 return self.connection.query(self.connectionObject,query2)
-                    .then(function (data2) {                    
+                    .then(async function (data2) {         
                     let boardResponse = {};
-                    data.forEach((e) => {
-                    if (!boardResponse.hasOwnProperty(e.board_id))
-                    {
-                        boardResponse[e.board_id] = {};
-                    }
-                        boardResponse[e.board_id].name = e.board_name;
-                        boardResponse[e.board_id].id = e.board_id;
-                        boardResponse[e.board_id].board_user_id = e.user_id;
-                        const creator = e.user_id == e.board_user_id ? true : false;
-                    if (boardResponse[e.board_id].user && boardResponse[e.board_id].user.length > 0)
-                    {
-                        boardResponse[e.board_id].user.push({ id: e.board_user_id, role: e.role, role_id:e.role_id, first_name: e.first_name, last_name: e.last_name, email: e.email, creator });
-                    } else {
-                        boardResponse[e.board_id].user = [];
-                        boardResponse[e.board_id].user.push({id:e.board_user_id,role:e.role, role_id:e.role_id, first_name:e.first_name, last_name:e.last_name,email:e.email, creator})
-                    }
-                    })
+                        data.forEach(async (e) => {
+                        if (!boardResponse.hasOwnProperty(e.board_id))
+                        {
+                            boardResponse[e.board_id] = {};
+                        }
+                            boardResponse[e.board_id].name = e.board_name;
+                            boardResponse[e.board_id].id = e.board_id;
+                            boardResponse[e.board_id].board_user_id = e.user_id;
+                            const creator = e.user_id == e.board_user_id ? true : false;
+                        if (boardResponse[e.board_id].user && boardResponse[e.board_id].user.length > 0)
+                        {
+                            boardResponse[e.board_id].user.push({ id: e.board_user_id, role: e.role, role_id:e.role_id, first_name: e.first_name, last_name: e.last_name, email: e.email, creator });
+                        } else {
+                            boardResponse[e.board_id].user = [];
+                            boardResponse[e.board_id].user.push({id:e.board_user_id,role:e.role, role_id:e.role_id, first_name:e.first_name, last_name:e.last_name,email:e.email, creator})
+                        }
+                        })
+                        for (var x in boardResponse)
+                        {
+                            const totalCard = await self.getTotalCard({ boardId: x });
+                            boardResponse[x].totalCard = totalCard[0].totalCard;
+                            boardResponse[x].totalCompleteCard = totalCard[0].totalCompleteCard;
+                        }
                     res.message = "Board Has been fetched";
                     res.status = 200;
                     res.totalCount = data2[0].total;
@@ -397,6 +403,22 @@ var boardController = (function () {
                 result.message = false;
                 result.data = err;
                 return result;
+            })
+    }
+    board.prototype.getTotalCard = async function (param)
+    {
+        let self = this
+        let res = new response();
+        const { boardId } = param;
+        let query = "SELECT COUNT(card.id) AS totalCard, SUM(card.is_complete = 1) AS totalCompleteCard FROM card WHERE list_id IN (SELECT id FROM list WHERE board_id = "+boardId+");";
+        return this.connection.query(this.connectionObject, query)
+            .then(function (data) { 
+                return data
+            }).catch(function (err) {
+                console.log(err);
+                res.message = err;
+                res.status = 406;
+                return res;
             })
     }
     return board;

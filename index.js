@@ -22,11 +22,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+const axios = require('axios');
 const corsOpts = {
-    origin: 'http://65.108.57.224'
+    origin: 'http://localhost:5173'
 };
 app.use(cors(), function (req, res, next) {
-    if (req.url.split('/')[2] !== "auth")
+    console.log(req.url.split('/')[1]);
+    
+    if (req.url.split('/')[1] !== "auth")
     {        
         const token = req.headers.authorization ? req.headers.authorization.split(' ')[1] : null;
         if (!token)
@@ -81,6 +84,7 @@ app.use('/api/list', cors(corsOpts), list);
 app.use('/api/card', cors(corsOpts), card);
 app.use("/api/setting", cors(corsOpts), setting);
 app.use("/api/project", cors(corsOpts), project);
+
 app.listen(port, () => {
     console.log("App has been started.");
 })

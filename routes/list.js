@@ -307,7 +307,7 @@ router.get('/getAllList/:boardId', async function (req, res) {
     } else {
         try {
             var response = await list.getAllList(req.params);
-            console.log(response);
+            // console.log(response);
             
             res.status(response.status)
             .send(response)
@@ -379,6 +379,29 @@ router.put('/updateCardPosition', async function (req, res) {
                 console.log(response);
                 res.status(response[0].status)
                 .send(response[0])
+            } catch (err) {
+                console.log(err);
+                
+                res.status(400)
+                .send(new error(err));
+            }
+        }
+})
+router.put('/archived', async function (req, res) {
+        let { boardId, listId, archived } = req.body;
+    Object.assign(req.body, { authenticatedUser: req.authenticatedUser.id })
+    console.log(req.authenticatedUser);
+    
+        if (!req.authenticatedUser || !boardId || !archived || !listId ) {
+            res.status(400)
+            .send(new error("Send Proper data."));
+            return;
+        } else {
+            try {
+                var response = await list.archivedList(req.body);
+                console.log(response);
+                res.status(response.status)
+                .send(response)
             } catch (err) {
                 console.log(err);
                 
