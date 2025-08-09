@@ -24,7 +24,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 const axios = require('axios');
 const corsOpts = {
-    origin: 'http://localhost:5173'
+    origin: 'http://65.108.57.224:5173'
 };
 app.use(cors(), function (req, res, next) {
     console.log(req.url.split('/')[1]);
