@@ -61,6 +61,8 @@ router.post('/login', async function (req, res) {
     {
         if (!uniqueIdentifier)
         {
+            console.log("BLOCK");
+            
             return res.status(400)
             .send(new error("Send Proper data."));
         } else {
@@ -98,15 +100,18 @@ router.post('/login', async function (req, res) {
             }
         }
         
-    }else if (!email || !password) {
+    } else if (!email || !password) {
+        console.log("BLOCK0");
         return res.status(400)
             .send(new error("Send Proper data."));
         // return;
     } else if (email && password) {
+        console.log("BLOCK1");
+        
         try {
             var result = await user.authenticateUser(email, password);
             if (!result.message) {
-                res.status(result.status)
+                return res.status(result.status)
                 .json({
                     success:result.status == 200 ?  true : false,
                     data: "User not found"
@@ -121,7 +126,9 @@ router.post('/login', async function (req, res) {
                     { expiresIn: "2h" }
                 );
             }
-            return res.status(result.status)
+            console.log("BLOCK2");
+            
+            res.status(result.status)
             .json({
                 success:result.status == 200 ?  true : false,
                 token: token,
@@ -130,8 +137,11 @@ router.post('/login', async function (req, res) {
                 data:result.data
             })
         } catch (err) {
+            console.log("BLOCK3");
+            console.log(err);
+            
             const error = new Error("Error ! Something went wrong");
-                return res.status(400)
+                res.status(400)
                 .json(error)
         }
     }
