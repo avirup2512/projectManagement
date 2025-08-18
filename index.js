@@ -1,6 +1,6 @@
 var express = require('express');
 const cors = require('cors');
-const port = 8089;
+const port = 3000;
 var path = require('path');
 var cookieParser = require('cookie-parser');
 const swaggerUI = require('swagger-ui-express');
