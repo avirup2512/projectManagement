@@ -14,7 +14,7 @@ var connection = (function () {
         });
     }
     mysqlConnectionInstance.prototype.getConnection = function () {
-        return this.configure('localhost', 'root', '25126631', `projectmanagement`);
+        return this.configure('localhost', 'root', '@Aa25126631', `projectmanagement`);
     }
 
     mysqlConnectionInstance.prototype.connect = function (con) {
