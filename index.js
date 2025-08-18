@@ -81,12 +81,12 @@ app.use(cors(), function (req, res, next) {
         next();
     }
 });
-app.use('/api/auth', cors(corsOpts), authentication);
-app.use('/api/board', cors(corsOpts), board);
-app.use('/api/list', cors(corsOpts), list);
-app.use('/api/card', cors(corsOpts), card);
-app.use("/api/setting", cors(corsOpts), setting);
-app.use("/api/project", cors(corsOpts), project);
+app.use('/auth', cors(corsOpts), authentication);
+app.use('/board', cors(corsOpts), board);
+app.use('/list', cors(corsOpts), list);
+app.use('/card', cors(corsOpts), card);
+app.use("/setting", cors(corsOpts), setting);
+app.use("/project", cors(corsOpts), project);
 
 app.listen(port, () => {
     console.log("App has been started.");
