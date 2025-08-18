@@ -10,6 +10,7 @@ let con = new connection(mysql);
 let connectionObject = con.getConnection();
 con.connect(connectionObject);
 var list = new listController(con,connectionObject);
+
 router.use((req, res, next) => {
     if (req.url == "/")
     {
@@ -307,7 +308,7 @@ router.get('/getAllList/:boardId', async function (req, res) {
     } else {
         try {
             var response = await list.getAllList(req.params);
-            // console.log(response);
+            console.log(response);
             
             res.status(response.status)
             .send(response)

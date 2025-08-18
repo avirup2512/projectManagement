@@ -279,7 +279,7 @@ var boardController = (function () {
         itemLimit = itemLimit ? itemLimit : 5
         offset = offset ? offset : 0;
         console.log(userId);
-        let query = "SELECT  board.id AS board_id, board.user_id, board.name AS board_name, bu.user_id AS board_user_id, u.first_name, u.last_name, r.role, r.id as role_id FROM (SELECT * FROM board WHERE project_id ="+projectId+" LIMIT "+itemLimit+" OFFSET "+offset+") as board JOIN  board_user bu ON board.id = bu.board_id JOIN user u on u.id = bu.user_id  JOIN  role r ON bu.role_id = r.id WHERE board.id IN (SELECT board_id FROM board_user WHERE user_id = "+userId+") ORDER BY board.id"
+        let query = "SELECT  board.id AS board_id, board.user_id, board.name AS board_name, board.is_archived, board.is_active, bu.user_id AS board_user_id, u.first_name, u.last_name, r.role, r.id as role_id FROM (SELECT * FROM board WHERE project_id ="+projectId+" LIMIT "+itemLimit+" OFFSET "+offset+") as board JOIN  board_user bu ON board.id = bu.board_id JOIN user u on u.id = bu.user_id  JOIN  role r ON bu.role_id = r.id WHERE board.id IN (SELECT board_id FROM board_user WHERE user_id = "+userId+") ORDER BY board.id"
         
         return this.connection.query(this.connectionObject, query)
             .then(function (data) {
@@ -294,6 +294,8 @@ var boardController = (function () {
                         }
                             boardResponse[e.board_id].name = e.board_name;
                             boardResponse[e.board_id].id = e.board_id;
+                            boardResponse[e.board_id].is_archived = e.is_archived;
+                            boardResponse[e.board_id].is_active = e.is_active;
                             boardResponse[e.board_id].board_user_id = e.user_id;
                             const creator = e.user_id == e.board_user_id ? true : false;
                         if (boardResponse[e.board_id].user && boardResponse[e.board_id].user.length > 0)
@@ -382,6 +384,34 @@ var boardController = (function () {
             res.status = 403;
             return res;
         }
+    }
+    board.prototype.archivedBoard = async function (param)
+    {
+        let res = new response();
+        let { authenticateUserId, boardIds, archive } = param;
+        // let hasBoard = await this.checkBoardExists(boardId);
+        // let userRole = await this.checkUserRole(boardId, authenticateUserId);
+        // if (hasBoard && userRole.length > 0 && userRole[0].role_name == "ROLE_SUPER_ADMIN")
+        // {
+        console.log(boardIds);
+        
+            let query = "UPDATE board SET is_archived='"+ archive +"' WHERE id in (" + boardIds + ")";
+            return this.connection.query(this.connectionObject, query)
+                .then(function (data3) {                                 
+                res.message = "Board has been archived.";
+                res.status = 200;
+                    res.data = data3;
+                    return res;
+                }).catch(function (err) {
+                    res.message = err;
+                    res.status = 406;
+                    return res;
+            })
+        // }else {
+        //     res.message = "User is not authorized.";
+        //     res.status = 403;
+        //     return res;
+        // }
     }
     board.prototype.getAllUser = async function (param)
     {

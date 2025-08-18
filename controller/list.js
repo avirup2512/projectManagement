@@ -2,6 +2,7 @@ var createQuery = require("../class/sql/createQuery");
 const error = require("../class/error");
 const response = require("../class/response");
 const boardController = require("./board");
+const cardController = require("./cards");
 var listController = (function () {
     let connection;
     let connectionObject;
@@ -9,7 +10,8 @@ var listController = (function () {
     function list(connection,connectionObject) {
         this.connection = connection;
         this.connectionObject = connectionObject;
-        this.board = new boardController(this.connection,this.connectionObject)
+        this.board = new boardController(this.connection, this.connectionObject);
+        this.card = new cardController(this.connection, this.connectionObject);
     }
     const updateCardPositionInList = function (idx, cards,type, self)
     {
@@ -228,23 +230,24 @@ var listController = (function () {
     }
     list.prototype.getAllList = async function (param)
     {
+        let self = this;
         let res = new response();
         let { boardId,userId } = param;    
         let boardExists = await this.board.checkBoardExists(boardId);
         if (boardExists)
         {   
-            let query = "SELECT list.id as list_id , list.name as list_name, list.created_date as list_created_date, list.position as list_position , list.is_archived as list_archived, card.id as card_id, card.name as card_name, card.description as card_description, card.create_date as card_create_date, card.is_complete as card_is_complete, card.position as card_position, card.tag_id, card.tag_name, card.tag_color, card.card_user_id, card.first_name, card.last_name, card.card_user_email, card.role_id,card.role, card.user_id as card_creator FROM List LEFT JOIN " +
+            let query = "SELECT list.id as list_id , list.name as list_name, list.created_date as list_created_date, list.position as list_position , list.is_archived as list_archived, list.is_backloged as list_backlog, card.id as card_id, card.name as card_name, card.description as card_description, card.create_date as card_create_date, card.is_complete as card_is_complete, card.position as card_position, card.tag_id, card.tag_name, card.tag_color, card.card_user_id, card.first_name, card.last_name, card.card_user_email, card.role_id,card.role, card.user_id as card_creator FROM List LEFT JOIN " +
                 
             "(SELECT c.*, tag.tag_id as tag_id, tag.tag_name, tag.tag_color,card_user.user_id as card_user_id, card_user.first_name, card_user.last_name, card_user.role_id, card_user.email as card_user_email, card_user.role FROM card c LEFT JOIN" +
             "(SELECT t.id as tag_id , t.tag as tag_name, t.color as tag_color, ct.id as card_tag_id, ct.card_id FROM tag t JOIN card_tag ct ON ct.tag_id = t.id ) as tag ON c.id = tag.card_id LEFT JOIN (SELECT u.id as user_id, u.first_name, u.last_name, u.email, cu.card_id as card_user_card_id, cu.role_id, r.role FROM card_user cu JOIN user u ON cu.user_id = u.id JOIN role r ON r.id = cu.role_id) as card_user ON card_user.card_user_card_id = c.id "+
             ") as card " +
             "ON card.list_id = list.id Where list.board_id = "+boardId+""
             return this.connection.query(this.connectionObject, query)
-                .then(function (data) {    
+                .then(async function (data) {    
                     let listObject = {};
                     if (data.length > 0)
                     {
-                        data.forEach((e) => {
+                        await data.forEach(async(e) => {
                             if (!listObject.hasOwnProperty(e.list_id))
                             {
                                 listObject[e.list_id] = {};
@@ -255,61 +258,70 @@ var listController = (function () {
                             listObject[e.list_id].board_id = boardId;
                             listObject[e.list_id].created_date = e.list_created_date;
                             listObject[e.list_id].is_archived = e.list_archived;
-                            if (e.card_id && e.card_creator == userId)
-                            {
-                                if (!listObject[e.list_id].hasOwnProperty("cards"))
-                                {
-                                    listObject[e.list_id].cards = {};
-                                }
-                                if (!listObject[e.list_id].cards.hasOwnProperty(e.card_id))
-                                {
-                                    listObject[e.list_id].cards[e.card_id] = {};
-                                }
-                                listObject[e.list_id].cards[e.card_id].name = e.card_name;
-                                listObject[e.list_id].cards[e.card_id].id = e.card_id;
-                                listObject[e.list_id].cards[e.card_id].description = e.card_description;
-                                listObject[e.list_id].cards[e.card_id].create_date = e.card_create_date;
-                                listObject[e.list_id].cards[e.card_id].isComplete = e.card_is_complete;
-                                listObject[e.list_id].cards[e.card_id].position = e.card_position;
-                                if (!listObject[e.list_id].cards[e.card_id].hasOwnProperty("users"))
-                                {
-                                    listObject[e.list_id].cards[e.card_id].users = {};
-                                }
-                                if (!listObject[e.list_id].cards[e.card_id].users.hasOwnProperty("e.card_user_id"))
-                                {
-                                    listObject[e.list_id].cards[e.card_id].users[e.card_user_id] = {};
-                                }
-                                const creator = e.card_creator == e.card_user_id ? true : false;
-                                listObject[e.list_id].cards[e.card_id].users[e.card_user_id].user_id = e.card_user_id;
-                                listObject[e.list_id].cards[e.card_id].users[e.card_user_id].creator = creator;
-                                listObject[e.list_id].cards[e.card_id].users[e.card_user_id].role_name = e.role
-                                listObject[e.list_id].cards[e.card_id].users[e.card_user_id].role = e.role_id;
-                                listObject[e.list_id].cards[e.card_id].users[e.card_user_id].name = e.first_name + " " + e.last_name;
-                                listObject[e.list_id].cards[e.card_id].users[e.card_user_id].email = e.card_user_email
+                            listObject[e.list_id].is_backloged = e.list_backlog;
+                            if (!listObject[e.list_id].hasOwnProperty("cards"))
+                                    {
+                                        listObject[e.list_id].cards = {};
+                                    }
+                                    if (!listObject[e.list_id].cards.hasOwnProperty(e.card_id))
+                                    {
+                                        listObject[e.list_id].cards[e.card_id] = {};
+                                    }
+                                    listObject[e.list_id].cards[e.card_id].name = e.card_name;
+                                    listObject[e.list_id].cards[e.card_id].id = e.card_id;
+                                    listObject[e.list_id].cards[e.card_id].description = e.card_description;
+                                    listObject[e.list_id].cards[e.card_id].create_date = e.card_create_date;
+                                    listObject[e.list_id].cards[e.card_id].isComplete = e.card_is_complete;
+                                    listObject[e.list_id].cards[e.card_id].position = e.card_position;
+                                    if (!listObject[e.list_id].cards[e.card_id].hasOwnProperty("users"))
+                                    {
+                                        listObject[e.list_id].cards[e.card_id].users = {};
+                                    }
+                                    if (!listObject[e.list_id].cards[e.card_id].users.hasOwnProperty("e.card_user_id"))
+                                    {
+                                        listObject[e.list_id].cards[e.card_id].users[e.card_user_id] = {};
+                                    }
+                                    const creator = e.card_creator == e.card_user_id ? true : false;
+                                    listObject[e.list_id].cards[e.card_id].users[e.card_user_id].user_id = e.card_user_id;
+                                    listObject[e.list_id].cards[e.card_id].users[e.card_user_id].creator = creator;
+                                    listObject[e.list_id].cards[e.card_id].users[e.card_user_id].role_name = e.role
+                                    listObject[e.list_id].cards[e.card_id].users[e.card_user_id].role = e.role_id;
+                                    listObject[e.list_id].cards[e.card_id].users[e.card_user_id].name = e.first_name + " " + e.last_name;
+                                    listObject[e.list_id].cards[e.card_id].users[e.card_user_id].email = e.card_user_email
 
-                                // ADDING TAG IN THE CARD
-                                if (!listObject[e.list_id].cards[e.card_id].hasOwnProperty("tags"))
-                                {
-                                    listObject[e.list_id].cards[e.card_id].tags = {};
-                                }
-                                if (!listObject[e.list_id].cards[e.card_id].tags.hasOwnProperty("e.tag_id"))
-                                {
-                                    listObject[e.list_id].cards[e.card_id].tags[e.tag_id] = {};
-                                }
-                                listObject[e.list_id].cards[e.card_id].tags[e.tag_id].tagId = e.tag_id;
-                                listObject[e.list_id].cards[e.card_id].tags[e.tag_id].tagName = e.tag_name;
-                                listObject[e.list_id].cards[e.card_id].tags[e.tag_id].tagColor = e.tag_color;
-                                
-                            }
+                                    // ADDING TAG IN THE CARD
+                                    if (!listObject[e.list_id].cards[e.card_id].hasOwnProperty("tags"))
+                                    {
+                                        listObject[e.list_id].cards[e.card_id].tags = {};
+                                    }
+                                    if (!listObject[e.list_id].cards[e.card_id].tags.hasOwnProperty("e.tag_id"))
+                                    {
+                                        listObject[e.list_id].cards[e.card_id].tags[e.tag_id] = {};
+                                    }
+                                    listObject[e.list_id].cards[e.card_id].tags[e.tag_id].tagId = e.tag_id;
+                                    listObject[e.list_id].cards[e.card_id].tags[e.tag_id].tagName = e.tag_name;
+                                    listObject[e.list_id].cards[e.card_id].tags[e.tag_id].tagColor = e.tag_color;
+                                    
+                            //     self.card.checkUserHasPermission({userId, cardId:e.card_id})
+                            //     .then((hasPemisiion) => {
+                            //     //  if (hasPemisiion)
+                            //     //     {
+                                    
+                            //         // }
+                            //         res.message = "List Has been fetched";
+                            //         res.status = 200;
+                            //         res.data = listObject;
+                            //         return res;
+                            // })
                             // listObject[e.list_id].cards.sort((a, b) => {
                             //     return a.position > b.position ? 1 : -1
                             // });
                         })
                     }
-                    res.message = "List Has been fetched";
-                    res.status = 200;
-                    res.data = listObject;
-                return res;
+                     res.message = "List Has been fetched";
+                                    res.status = 200;
+                                    res.data = listObject;
+                                    return res;
             }).catch(function (err) {
                 console.log(err);
                 

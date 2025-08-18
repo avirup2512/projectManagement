@@ -6,10 +6,60 @@ var router = express.Router();
 var error = require('../class/error');
 var cardController = require("../controller/cards")
 
+const fs = require("fs");
+const {formidable} = require("formidable");
+const path = require("path");
+const crypto = require("crypto");
+var fileController = require('../controller/file');
+
+const algorithim = "aes-256-cbc";
+
+// Secret key & IV
+const algorithm = "aes-256-cbc";
+const secretKey = crypto.randomBytes(32); // 32 bytes for AES-256
+const iv = crypto.randomBytes(16); // 16 bytes for IV
+
+// Encrypt function
+function encrypt(text) {
+    const cipher = crypto.createCipheriv(algorithm, process.env.ENCRYPTION_KEY, process.env.ENCRYPTION_IV);
+    let encrypted = cipher.update(text, "utf8", "hex");
+    encrypted += cipher.final("hex");
+    return encrypted;
+}
+
+// Decrypt function
+function decrypt(encryptedText) {
+    const decipher = crypto.createDecipheriv(algorithm, process.env.ENCRYPTION_KEY, process.env.ENCRYPTION_IV);
+    let decrypted = decipher.update(encryptedText, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+}
+function getFolderSize(folderPath) {
+    let totalSize = 0;
+
+    function calculateSize(directory) {
+        const files = fs.readdirSync(directory);
+
+        files.forEach(file => {
+            const filePath = path.join(directory, file);
+            const stats = fs.statSync(filePath);
+
+            if (stats.isFile()) {
+                totalSize += stats.size; // size in bytes
+            } else if (stats.isDirectory()) {
+                calculateSize(filePath);
+            }
+        });
+    }
+    calculateSize(folderPath);
+    return Math.floor(totalSize/1024)/1024; // in bytes
+}
+
 let con = new connection(mysql);
 let connectionObject = con.getConnection();
 con.connect(connectionObject);
-var card = new cardController(con,connectionObject);
+var card = new cardController(con, connectionObject);
+var file = new fileController(con,connectionObject);
 router.use((req, res, next) => {
     if (req.url == "/")
     {
@@ -711,5 +761,69 @@ router.post('/cardActivity', async function (req, res) {
                 .send(new error(err));
             }
         }
+})
+router.post("/upload", async function (req, res) {
+    const form = formidable({ multiples: false });
+    try {
+        console.log("FILES");
+        
+        form.parse(req, (err, fields, files) => {
+        console.log("FILE");
+        if (err) {
+            return res.status(500).json({ error: "File upload error" });
+        }
+        const boardId = fields.boardId?.[0];
+        const projectId = fields.projectId?.[0];
+        const cardId = fields.cardId?.[0];
+        const uploadedFile = files?.file?.[0];
+        console.log(boardId);
+        console.log(projectId);
+        console.log(cardId);    
+        
+        Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id })
+        if (!req.authenticatedUser || !boardId || !cardId || !uploadedFile || !projectId ) {
+            res.status(400)
+            .send(new error("Send Proper data."));
+                return;
+            }
+            const uploadDir = path.join(__dirname, "../../UploadedFile/" + encrypt(projectId) + "/" + encrypt(boardId) + "/" + 
+            encrypt((req.authenticatedUser.id).toString()) + "");
+            const ProjectFolder = path.join(__dirname, "../../UploadedFile/" + encrypt(projectId));
+            console.log(getFolderSize(uploadDir) + Math.floor((uploadedFile.size / 1024) / 1024));
+            if(getFolderSize(ProjectFolder) + Math.floor((uploadedFile.size/1024)/1024) < 200)
+            {
+                if (getFolderSize(uploadDir) + Math.floor((uploadedFile.size/1024)/1024) < 100)
+                {
+                    if (!fs.existsSync(uploadDir))
+                    {
+                        fs.mkdirSync(uploadDir, { recursive: true });
+                    }
+                    const oldPath = files.file[0].filepath;
+                    const newFileName = Date.now()+"-"+files.file[0].originalFilename;
+                    const newPath = path.join( uploadDir, newFileName);
+                    fs.rename(oldPath, newPath, async (err) => {
+                        if (err) throw err;
+                        const response = await file.uploadFile({userId:req.authenticatedUser.id,boardId,projectId,cardId,path:newPath, memory:files.file[0].size})
+                        res.json({
+                            message: "File uploaded successfully",
+                            filename: newFileName,
+                            path: `/uploads/${newFileName}`,
+                            response
+                        });
+                    })
+                    } else {
+                    res.status(400)
+                        .send({message:"File limit reached for User"});
+                    }
+                } else {
+                        res.status(400)
+                        .send({message:"File limit reached for Project"});
+                }
+    })
+    } catch (error) {
+        console.log(error);
+        
+    }
+   
 })
 module.exports = router;

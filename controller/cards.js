@@ -175,6 +175,26 @@ var cardController = (function () {
             return [response];
         })
     }
+    const checkUserHasPermission = async function (cardId,userId, self)
+    {
+        let query = "SELECT COUNT(*) as totalCards FROM card_user cu WHERE cu.card_id="+cardId+" AND cu.user_id="+userId+"";
+        return self.connection.query(self.connectionObject, query)
+        .then(function (data) {
+                if (data[0].totalCards > 0)
+                    return true;
+                else
+                    return false;
+        }).catch(function (err) {
+                console.log(err);
+                
+                return false;
+        })
+    }
+    card.prototype.checkUserHasPermission = async function (param)
+    {
+        const { cardId, userId } = param;
+        return checkUserHasPermission(cardId, userId, this);
+    }
     card.prototype.checkTagIsExists = function(tagName)
     {
         return this.connection.query(this.connectionObject, "SELECT * FROM tag WHERE tag='" + tagName + "'")
@@ -615,18 +635,24 @@ var cardController = (function () {
     }
     card.prototype.getCardById = async function (param)
     {
+        console.log("========================================================================");
+        
         let res = new response();
         let { boardId,userId ,cardId} = param;    
         let boardExists = await this.board.checkBoardExists(boardId);
+        console.log(boardExists);
+        
         if (boardExists)
         {            
             var userIsAuthenticated = await this.board.checkUserIsAuthenticated(boardId, userId);
-            if (userIsAuthenticated)
-            {
-                let query = "SELECT cmnt2.comment, cmnt2.id as commentId, cmnt2.created_date as commentDate, cmnt2.commentUserName as cmntUser2, cmnt2.cmntUserId as cmntUserId, cli.name as cli_name,cli.id as cli_id,cli.is_checked as cli_isChecked, cli.position as cli_position, c.id,c.*,c.user_id as creator, u.id as user_id, concat(u.first_name,' ', u.last_name) as full_name, u.email, cu.role_id, r.role as role_name, t.tag, t.id as tagId FROM card c join card_user cu on cu.card_id = c.id "+
-                "join user u on cu.user_id = u.id join role r on r.id = cu.role_id left join card_tag ct on ct.card_id = c.id left join tag t on t.id = ct.tag_id LEFT JOIN checklist_item cli on cli.card_id = c.id LEFT JOIN (SELECT cmnt.*, concat(cmntUser.first_name, ' ',cmntUser.last_name) as commentUserName, cmntUser.email, cmntUser.id as cmntUserId FROM comment cmnt JOIN user cmntUser on cmntUser.id = cmnt.user_id WHERE cmnt.card_id= " + cardId + ") as cmnt2 on cmnt2.card_id = c.id  where c.id = " + cardId + " and c.user_id = " + userId + "";
+            // if (userIsAuthenticated)
+            // {
+                let query = "SELECT cmnt2.comment, cmnt2.id as commentId, cmnt2.created_date as commentDate, cmnt2.commentUserName as cmntUser2, cmnt2.cmntUserId as cmntUserId, cli.name as cli_name,cli.id as cli_id,cli.is_checked as cli_isChecked, cli.position as cli_position, c.id,c.*,c.user_id as creator, u.id as user_id, concat(u.first_name,' ', u.last_name) as full_name, u.email, cu.role_id, r.role as role_name, t.tag, t.id as tagId FROM card c LEFT JOIN card_user cu on cu.card_id = c.id "+
+                "left join user u on cu.user_id = u.id left join role r on r.id = cu.role_id left join card_tag ct on ct.card_id = c.id left join tag t on t.id = ct.tag_id LEFT JOIN checklist_item cli on cli.card_id = c.id LEFT JOIN (SELECT cmnt.*, concat(cmntUser.first_name, ' ',cmntUser.last_name) as commentUserName, cmntUser.email, cmntUser.id as cmntUserId FROM comment cmnt JOIN user cmntUser on cmntUser.id = cmnt.user_id WHERE cmnt.card_id= " + cardId + ") as cmnt2 on cmnt2.card_id = c.id  where c.id = " + cardId + "";
                 return this.connection.query(this.connectionObject, query)
                     .then(function (data) {    
+                        console.log(data);
+                        
                     res.message = "Cards Has been fetched";
                     res.status = 200;                
                     const cardObject = {};
@@ -635,6 +661,9 @@ var cardController = (function () {
                         let checkListSet = new Set();
                         let commentSet = new Set();
                         data.forEach((e) => {
+                            console.log(e);
+                            console.log("HADIMBA");
+                            
                         console.log(e.reminder_date);
                         
                         if (!cardObject.hasOwnProperty(e.id))
@@ -698,11 +727,11 @@ var cardController = (function () {
                         res.status = 406;
                         return res;
                     })
-                    } else {
-                        res.message = "User is not authorized";
-                        res.status = 403;
-                        return res;
-                    }
+                    // } else {
+                    //     res.message = "User is not authorized";
+                    //     res.status = 403;
+                    //     return res;
+                    // }
         } else {
             res.message = "Board does not exists";
             res.status = 403;

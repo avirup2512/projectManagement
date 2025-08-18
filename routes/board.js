@@ -367,4 +367,24 @@ router.get('/getAllUser/:boardId', async function (req, res) {
         }
     }
 })
+router.put('/archivedBoard', async function (req, res) {
+    let { boardIds, archive } = req.body;
+    Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id })
+    if (!req.authenticatedUser || !boardIds || !archive ) {
+        res.status(400)
+        .send(new error("Send Proper data."));
+        return;
+    } else {
+        try {
+            var response = await board.archivedBoard(req.body);
+            res.status(response.status)
+            .send(response)
+        } catch (err) {
+            console.log(err);
+            
+            res.status(344)
+            .send(new error(err));
+        }
+    }
+})
 module.exports = router;

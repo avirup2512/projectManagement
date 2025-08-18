@@ -18,13 +18,16 @@ const setting = require("./routes/settings");
 const project = require("./routes/project");
 var app = express();
 app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
-app.use(express.json());
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ limit: "100mb", extended: true }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+require('dotenv').config();
+
 const axios = require('axios');
 const corsOpts = {
-    origin: 'http://65.108.57.224:5173'
+    origin: '*'
 };
 app.use(cors(), function (req, res, next) {
     console.log(req.url.split('/')[1]);
@@ -339,6 +342,17 @@ async function createTables()
     if(!projectUserTableExists)
     {
         con.createTable(connectionObject, createQuery.createProjectUserTable)
+            .then(function (data) {
+                console.log(data);
+            }).catch(function (err) {
+                console.log(err);
+        })
+    };
+    // UPLOADED FILE TABLE CREATE
+    var uploadedFileTableExists = await con.checkTableExists(connectionObject,dbName,"uploaded_file");
+    if(!uploadedFileTableExists)
+    {
+        con.createTable(connectionObject, createQuery.createUploadedFileTable)
             .then(function (data) {
                 console.log(data);
             }).catch(function (err) {

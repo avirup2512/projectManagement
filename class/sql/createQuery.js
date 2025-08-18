@@ -15,7 +15,7 @@ var createQuery = {
         "type varchar(255))",
     createBoardTable: "CREATE TABLE board" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
-        "user_id int, name varchar(255), create_date DATETIME DEFAULT CURRENT_TIMESTAMP, is_public BOOLEAN DEFAULT false, project_id int," +
+        "user_id int, name varchar(255), create_date DATETIME DEFAULT CURRENT_TIMESTAMP, is_public BOOLEAN DEFAULT false, project_id int, is_archived int DEFAULT 0, is_active int DEFAULT 1," +
         "FOREIGN KEY (user_id) REFERENCES user(id), FOREIGN KEY (project_id) REFERENCES project(id))",
     createBoardUserTable: "CREATE TABLE board_user" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
@@ -33,7 +33,7 @@ var createQuery = {
         "name varchar(255), color varchar(255))",
     createListTable: "CREATE TABLE list" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
-        "board_id int, name varchar(255), created_date DATETIME DEFAULT CURRENT_TIMESTAMP, position int, is_archived int DEFAULT 0," +
+        "board_id int, name varchar(255), created_date DATETIME DEFAULT CURRENT_TIMESTAMP, position int, is_archived int DEFAULT 0, is_backloged int DEFAULT 0, " +
         "FOREIGN KEY (board_id) REFERENCES board(id))",
     createTagTable: "CREATE TABLE tag" +
         "(id int PRIMARY KEY AUTO_INCREMENT,"+
@@ -100,5 +100,10 @@ var createQuery = {
         "FOREIGN KEY (role_id) REFERENCES role(id)," +
         "FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE," +
         "UNIQUE (user_id, project_id))",
+    createUploadedFileTable : "CREATE TABLE uploaded_file" +
+    "(id INT PRIMARY KEY AUTO_INCREMENT," + 
+    " filePath VARCHAR(255), memory BIGINT, user_id INT, card_id INT, project_id INT, uploaded_date DATETIME DEFAULT CURRENT_TIMESTAMP, " +
+    " FOREIGN KEY (user_id) REFERENCES user(id)," +
+    " FOREIGN KEY (card_id) REFERENCES card(id), FOREIGN KEY (project_id) REFERENCES project(id)) "
 }
 module.exports = createQuery;
