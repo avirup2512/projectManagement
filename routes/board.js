@@ -370,7 +370,7 @@ router.get('/getAllUser/:boardId', async function (req, res) {
 router.put('/archivedBoard', async function (req, res) {
     let { boardIds, archive } = req.body;
     Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id })
-    if (!req.authenticatedUser || !boardIds || !archive ) {
+    if (!req.authenticatedUser || !boardIds || archive == undefined ) {
         res.status(400)
         .send(new error("Send Proper data."));
         return;
