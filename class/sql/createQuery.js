@@ -20,7 +20,7 @@ var createQuery = {
   createBoardTable:
     "CREATE TABLE board" +
     "(id int PRIMARY KEY AUTO_INCREMENT," +
-    "user_id int, name varchar(255), create_date DATETIME DEFAULT CURRENT_TIMESTAMP, is_public BOOLEAN DEFAULT false, project_id int, is_archived int DEFAULT 0, is_active int DEFAULT 1, is_deleted int DEFAULT 0 " +
+    "user_id int, name varchar(255), create_date DATETIME DEFAULT CURRENT_TIMESTAMP, is_public BOOLEAN DEFAULT false, project_id int, is_archived int DEFAULT 0, is_active int DEFAULT 1, is_deleted int DEFAULT 0, " +
     "FOREIGN KEY (user_id) REFERENCES user(id), FOREIGN KEY (project_id) REFERENCES project(id))",
   createBoardUserTable:
     "CREATE TABLE board_user" +
