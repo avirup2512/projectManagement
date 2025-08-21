@@ -228,10 +228,10 @@ router.delete('/delete', async function (req, res) {
      *        description: Not Found
      *      500:
      */
-router.get('/getAllBoard/:projectId/:itemLimit/:offset', async function (req, res) {
-    const { projectId } = req.params;
+router.get('/getAllBoard/:projectId/:isActive/:itemLimit/:offset', async function (req, res) {
+    const { projectId, isActive } = req.params;
     Object.assign(req.params, { userId: req.authenticatedUser.id })
-    if (!req.authenticatedUser || !projectId) {
+    if (!req.authenticatedUser || !projectId || isActive == undefined) {
         res.status(400)
             .send(new error("Send Proper data."));
         return;
@@ -368,9 +368,9 @@ router.get('/getAllUser/:boardId', async function (req, res) {
     }
 })
 router.put('/archivedBoard', async function (req, res) {
-    let { boardIds, archive } = req.body;
+    let { boardIds,projectId, archive } = req.body;
     Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id })
-    if (!req.authenticatedUser || !boardIds || archive == undefined ) {
+    if (!req.authenticatedUser || !boardIds || archive == undefined || !projectId ) {
         res.status(400)
         .send(new error("Send Proper data."));
         return;
