@@ -52,7 +52,7 @@ var createQuery = {
     "CREATE TABLE card" +
     "(id int PRIMARY KEY AUTO_INCREMENT, user_id int, " +
     "list_id int, name varchar(255),description varchar(255), create_date DATETIME DEFAULT CURRENT_TIMESTAMP," +
-    "is_active BOOLEAN DEFAULT true, is_complete BOOLEAN DEFAULT false, due_date DATETIME, reminder_date DATETIME, progress int, position int, " +
+    "is_active BOOLEAN DEFAULT true, is_complete BOOLEAN DEFAULT false, due_date DATETIME, reminder_date DATETIME, progress int, position int, is_deleted int DEFAULT 0 , " +
     "FOREIGN KEY (list_id) REFERENCES list(id))",
   createCardUserTable:
     "CREATE TABLE card_user" +
