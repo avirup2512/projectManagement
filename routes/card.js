@@ -527,8 +527,9 @@ router.put("/editUserRole", async function (req, res) {
  */
 
 router.get("/getTag/:searchKey/:boardId", async function (req, res) {
+  const { boardId } = req.params;
   Object.assign(req.params, { userId: req.authenticatedUser.id });
-  if (!req.authenticatedUser) {
+  if (!req.authenticatedUser || !boardId) {
     res.status(400).send(new error("Send Proper data."));
     return;
   } else {
@@ -571,17 +572,19 @@ router.get("/getTag/:searchKey/:boardId", async function (req, res) {
  */
 
 router.post("/addTag", async function (req, res) {
-  let { cardId, tag, boardId } = req.body;
+  let { cardId, name, color, boardId } = req.body;
   Object.assign(req.body, { authenticateUserId: req.authenticatedUser.id });
-  if (!req.authenticatedUser || !cardId || !tag || !boardId) {
+  if (!req.authenticatedUser || !cardId || !name || !color || !boardId) {
     res.status(400).send(new error("Send Proper data."));
     return;
   } else {
     try {
-      var response = await card.addTag(req.body);
-      console.log(response);
+      var r = await card.addTag(req.body);
+      console.log("RESPONSE ===========================");
 
-      res.status(response.status).send(response);
+      console.log(r);
+
+      res.status(r.status).send(r);
     } catch (err) {
       console.log(err);
 

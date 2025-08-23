@@ -11,6 +11,46 @@ var boardController = (function () {
     this.connectionObject = connectionObject;
     this.user = new userController(this.connection, this.connectionObject);
   }
+  const checkBoardTag = function (tagName, boardId, self) {
+    const query =
+      "SELECT * FROM board_tag WHERE name='" +
+      tagName +
+      "' AND board_id=" +
+      boardId +
+      "";
+    return self.connection
+      .query(self.connectionObject, query)
+      .then(function (data) {
+        if (data.length == 0) return false;
+        else return true;
+      })
+      .catch(function (err) {
+        console.log(err);
+
+        return true;
+      });
+  };
+  const checkBoardTagColor = function (tagName, boardId, color, self) {
+    const query =
+      "SELECT * FROM board_tag WHERE name='" +
+      tagName +
+      "'AND color ='" +
+      color +
+      "' AND board_id=" +
+      boardId +
+      "";
+    return self.connection
+      .query(self.connectionObject, query)
+      .then(function (data) {
+        if (data.length == 0) return false;
+        else return true;
+      })
+      .catch(function (err) {
+        console.log(err);
+
+        return true;
+      });
+  };
   const addBoardUser = function (idx, users, boardId, self) {
     let res = new response();
     if (idx > users.length - 1) {
@@ -222,13 +262,7 @@ var boardController = (function () {
     }
     if (isPublic === undefined) isPublic = 0;
     let updateUserQuery =
-      "UPDATE board SET name = '" +
-      name +
-      "',is_public = '" +
-      isPublic +
-      "' WHERE id=" +
-      boardId +
-      "";
+      "UPDATE board SET name = ?,is_public =? WHERE id=" + boardId + "";
     var userCanEdit = await this.checkUserIsAuthenticated(
       param.boardId,
       param.userId
@@ -236,7 +270,7 @@ var boardController = (function () {
     let boardExists = await this.checkBoardExists(param.boardId);
     if (boardExists && userCanEdit) {
       return this.connection
-        .query(this.connectionObject, updateUserQuery)
+        .queryByArray(this.connectionObject, updateUserQuery, [name, isPublic])
         .then(function (data) {
           let selectExistingQuery =
             "SELECT user_id from board_user WHERE board_id='" +
@@ -336,7 +370,7 @@ var boardController = (function () {
     offset = offset ? offset : 0;
     console.log(userId);
     let query =
-      "SELECT  board.id AS board_id, board.user_id, board.name AS board_name, board.is_archived, board.is_active, bu.user_id AS board_user_id, u.first_name, u.last_name, r.role, r.id as role_id FROM (SELECT * FROM board WHERE project_id =" +
+      "SELECT  bt.id as board_tag_id, bt.name as board_tag_name, bt.color as board_tag_color, bt.attach_in_board, board.id AS board_id, board.user_id, board.name AS board_name, board.is_archived, board.is_active, bu.user_id AS board_user_id, u.first_name, u.last_name, r.role, r.id as role_id FROM (SELECT * FROM board WHERE project_id =" +
       projectId +
       " AND is_archived=" +
       isActive +
@@ -345,13 +379,15 @@ var boardController = (function () {
       itemLimit +
       " OFFSET " +
       offset +
-      ") as board JOIN  board_user bu ON board.id = bu.board_id JOIN user u on u.id = bu.user_id  JOIN  role r ON bu.role_id = r.id WHERE board.id IN (SELECT board_id FROM board_user WHERE user_id = " +
+      ") as board LEFT JOIN board_tag bt ON bt.board_id = board.id JOIN  board_user bu ON board.id = bu.board_id JOIN user u on u.id = bu.user_id  JOIN  role r ON bu.role_id = r.id WHERE board.id IN (SELECT board_id FROM board_user WHERE user_id = " +
       userId +
       ") ORDER BY board.id";
 
     return this.connection
       .query(this.connectionObject, query)
       .then(function (data) {
+        console.log(data);
+
         let query2 =
           "SELECT COUNT(*) as total from board WHERE project_id=" +
           projectId +
@@ -372,30 +408,45 @@ var boardController = (function () {
               boardResponse[e.board_id].is_active = e.is_active;
               boardResponse[e.board_id].board_user_id = e.user_id;
               const creator = e.user_id == e.board_user_id ? true : false;
+              if (!boardResponse[e.board_id].hasOwnProperty("user")) {
+                boardResponse[e.board_id].user = {};
+              }
               if (
-                boardResponse[e.board_id].user &&
-                boardResponse[e.board_id].user.length > 0
+                !boardResponse[e.board_id].user.hasOwnProperty(e.board_user_id)
               ) {
-                boardResponse[e.board_id].user.push({
-                  id: e.board_user_id,
-                  role: e.role,
-                  role_id: e.role_id,
-                  first_name: e.first_name,
-                  last_name: e.last_name,
-                  email: e.email,
-                  creator,
-                });
-              } else {
-                boardResponse[e.board_id].user = [];
-                boardResponse[e.board_id].user.push({
-                  id: e.board_user_id,
-                  role: e.role,
-                  role_id: e.role_id,
-                  first_name: e.first_name,
-                  last_name: e.last_name,
-                  email: e.email,
-                  creator,
-                });
+                boardResponse[e.board_id].user[e.board_user_id] = {};
+              }
+              boardResponse[e.board_id].user[e.board_user_id].id =
+                e.board_user_id;
+              boardResponse[e.board_id].user[e.board_user_id].role = e.role;
+              boardResponse[e.board_id].user[e.board_user_id].role_id =
+                e.role_id;
+              boardResponse[e.board_id].user[e.board_user_id].first_name =
+                e.first_name;
+              boardResponse[e.board_id].user[e.board_user_id].last_name =
+                e.last_name;
+              boardResponse[e.board_id].user[e.board_user_id].email = e.email;
+              boardResponse[e.board_id].user[e.board_user_id].creator = creator;
+              if (!boardResponse[e.board_id].hasOwnProperty("tag")) {
+                boardResponse[e.board_id].tag = {};
+              }
+              if (
+                e.board_tag_id != null &&
+                !boardResponse[e.board_id].tag.hasOwnProperty(e.board_tag_id)
+              ) {
+                boardResponse[e.board_id].tag[e.board_tag_id] = {};
+              }
+              if (
+                boardResponse[e.board_id].tag.hasOwnProperty(e.board_tag_id)
+              ) {
+                boardResponse[e.board_id].tag[e.board_tag_id]["tagId"] =
+                  e.board_tag_id;
+                boardResponse[e.board_id].tag[e.board_tag_id]["tagName"] =
+                  e.board_tag_name;
+                boardResponse[e.board_id].tag[e.board_tag_id]["tagColor"] =
+                  e.board_tag_color;
+                boardResponse[e.board_id].tag[e.board_tag_id]["attachInboard"] =
+                  e.attach_in_board;
               }
             });
             for (var x in boardResponse) {
@@ -584,6 +635,32 @@ var boardController = (function () {
         return result;
       });
   };
+  board.prototype.getAllTag = async function (param) {
+    let result = new response("", 404, {});
+    const { boardId } = param;
+    return this.connection
+      .query(
+        this.connectionObject,
+        "SELECT * FROM board_tag WHERE board_id=" + boardId + ""
+      )
+      .then(function (data) {
+        if (data.length == 0) {
+          result.message = "No tag has been fetched";
+          result.status = 404;
+          return result;
+        } else {
+          result.message = true;
+          result.data = data;
+          result.status = 200;
+          return result;
+        }
+      })
+      .catch(function (err) {
+        result.message = false;
+        result.data = err;
+        return result;
+      });
+  };
   board.prototype.getTotalCard = async function (param) {
     let self = this;
     let res = new response();
@@ -596,6 +673,86 @@ var boardController = (function () {
       .query(this.connectionObject, query)
       .then(function (data) {
         return data;
+      })
+      .catch(function (err) {
+        console.log(err);
+        res.message = err;
+        res.status = 406;
+        return res;
+      });
+  };
+  board.prototype.editBoardTag = async function (param) {
+    let self = this;
+    let res = new response();
+    const { boardId, name, color, tagId, attachInBoard } = param;
+    const tagExists = await checkBoardTagColor(name, boardId, color, self);
+    let query =
+      "UPDATE board_tag SET name=? ,color=?, attach_in_board=? WHERE id=" +
+      tagId +
+      "";
+    return this.connection
+      .queryByArray(this.connectionObject, query, [name, color, attachInBoard])
+      .then(function (data) {
+        res.message = "Tag has been updated";
+        res.status = 200;
+        res.data = data;
+        return res;
+      })
+      .catch(function (err) {
+        console.log(err);
+        res.message = err;
+        res.status = 406;
+        return res;
+      });
+  };
+  board.prototype.addBoardTag = async function (param) {
+    let self = this;
+    let res = new response();
+    const { boardId, name, color, attachInBoard } = param;
+    const tagExists = await checkBoardTag(name, boardId, self);
+    if (!tagExists) {
+      let query =
+        "INSERT INTO board_tag (name,board_id,color,attach_in_board) VALUES('" +
+        name +
+        "', " +
+        boardId +
+        ",' " +
+        color +
+        "', " +
+        attachInBoard +
+        ")";
+      return this.connection
+        .query(this.connectionObject, query)
+        .then(function (data) {
+          res.message = "Tag has been added";
+          res.status = 200;
+          res.data = data;
+          return res;
+        })
+        .catch(function (err) {
+          console.log(err);
+          res.message = err;
+          res.status = 406;
+          return res;
+        });
+    } else {
+      res.message = "Tag is already exists";
+      res.status = 406;
+      return res;
+    }
+  };
+  board.prototype.deleteBoardTag = async function (param) {
+    let self = this;
+    let res = new response();
+    const { boardId, boardTagId } = param;
+    let query = "DELETE FROM board_tag WHERE id=" + boardTagId + "";
+    return this.connection
+      .query(this.connectionObject, query)
+      .then(function (data) {
+        res.message = "Tag has been deleted";
+        res.status = 200;
+        res.data = data;
+        return res;
       })
       .catch(function (err) {
         console.log(err);

@@ -42,12 +42,8 @@ var createQuery = {
   createListTable:
     "CREATE TABLE list" +
     "(id int PRIMARY KEY AUTO_INCREMENT," +
-    "board_id int, name varchar(255), created_date DATETIME DEFAULT CURRENT_TIMESTAMP, position int, is_archived int DEFAULT 0, is_backloged int DEFAULT 0, " +
+    "board_id int, name varchar(255), created_date DATETIME DEFAULT CURRENT_TIMESTAMP, position int, is_archived int DEFAULT 0, is_backloged int DEFAULT 0, is_deleted int DEFAULT 0, " +
     "FOREIGN KEY (board_id) REFERENCES board(id))",
-  createTagTable:
-    "CREATE TABLE tag" +
-    "(id int PRIMARY KEY AUTO_INCREMENT," +
-    "tag varchar(255),color varchar(255))",
   createCardsTable:
     "CREATE TABLE card" +
     "(id int PRIMARY KEY AUTO_INCREMENT, user_id int, " +
@@ -65,10 +61,16 @@ var createQuery = {
   createCardTagTable:
     "CREATE TABLE card_tag" +
     "(id int PRIMARY KEY AUTO_INCREMENT," +
-    "tag_id int, card_id int, color varchar(255)," +
-    "FOREIGN KEY (tag_id) REFERENCES tag(id)," +
+    "card_id int, color varchar(255), board_tag_id int, " +
     "FOREIGN KEY (card_id) REFERENCES card(id)," +
-    "UNIQUE (tag_id, card_id))",
+    "FOREIGN KEY (board_tag_id) REFERENCES board_tag(id) ON DELETE CASCADE ," +
+    "UNIQUE (board_tag_id, card_id))",
+  createBoardTagTable:
+    "CREATE TABLE board_tag" +
+    "(id int PRIMARY KEY AUTO_INCREMENT," +
+    "name varchar(20), board_id int, color varchar(255), attach_in_board int DEFAULT 0, create_date DATETIME DEFAULT CURRENT_TIMESTAMP, " +
+    "FOREIGN KEY (board_id) REFERENCES board(id)," +
+    "UNIQUE (name, board_id, color))",
   createCardLabelTable:
     "CREATE TABLE card_label" +
     "(id int PRIMARY KEY AUTO_INCREMENT," +

@@ -244,7 +244,8 @@ var listController = (function () {
     var self = this;
     let res = new response();
     let { boardId, listId } = param;
-    let updateUserQuery = "DELETE FROM list " + "WHERE id='" + listId + "'";
+    let updateUserQuery =
+      "UPDATE list SET is_deleted=1 WHERE id='" + listId + "'";
     let boardExists = await this.board.checkBoardExists(boardId);
     let listExists = await this.checkListExists(listId);
     let userCanEdit = await this.board.checkUserIsAuthenticated(
@@ -269,17 +270,21 @@ var listController = (function () {
   list.prototype.getAllList = async function (param) {
     let self = this;
     let res = new response();
-    let { boardId, userId } = param;
+    let { boardId, isArchive } = param;
     let boardExists = await this.board.checkBoardExists(boardId);
     if (boardExists) {
       let query =
         "SELECT list.id as list_id , list.name as list_name, list.created_date as list_created_date, list.position as list_position , list.is_archived as list_archived, list.is_backloged as list_backlog, card.id as card_id, card.name as card_name, card.description as card_description, card.create_date as card_create_date, card.is_complete as card_is_complete, card.position as card_position, card.tag_id, card.tag_name, card.tag_color, card.card_user_id, card.first_name, card.last_name, card.card_user_email, card.role_id,card.role, card.user_id as card_creator FROM list LEFT JOIN " +
         "(SELECT c.*, tag.tag_id as tag_id, tag.tag_name, tag.tag_color,card_user.user_id as card_user_id, card_user.first_name, card_user.last_name, card_user.role_id, card_user.email as card_user_email, card_user.role FROM card c LEFT JOIN" +
-        "(SELECT t.id as tag_id , t.tag as tag_name, t.color as tag_color, ct.id as card_tag_id, ct.card_id FROM tag t JOIN card_tag ct ON ct.tag_id = t.id ) as tag ON c.id = tag.card_id LEFT JOIN (SELECT u.id as user_id, u.first_name, u.last_name, u.email, cu.card_id as card_user_card_id, cu.role_id, r.role FROM card_user cu JOIN user u ON cu.user_id = u.id JOIN role r ON r.id = cu.role_id) as card_user ON card_user.card_user_card_id = c.id WHERE c.is_deleted=0 " +
+        "(SELECT bt.id as tag_id , bt.name as tag_name, bt.color as tag_color, ct.id as card_tag_id, ct.card_id FROM board_tag bt JOIN card_tag ct ON ct.board_tag_id = bt.id ) as tag ON c.id = tag.card_id LEFT JOIN (SELECT u.id as user_id, u.first_name, u.last_name, u.email, cu.card_id as card_user_card_id, cu.role_id, r.role FROM card_user cu JOIN user u ON cu.user_id = u.id JOIN role r ON r.id = cu.role_id) as card_user ON card_user.card_user_card_id = c.id WHERE c.is_deleted=0 " +
         ") as card " +
         "ON card.list_id = list.id Where list.board_id = " +
         boardId +
-        "";
+        " AND list.is_archived=" +
+        isArchive +
+        " AND list.is_deleted=0";
+      ("");
+      ("");
       return this.connection
         .query(this.connectionObject, query)
         .then(async function (data) {
